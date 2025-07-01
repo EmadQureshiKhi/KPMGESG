@@ -11,12 +11,12 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="KPMG ESG Analytics API", version="1.0.0")
+app = FastAPI(title=" ESG Analytics API", version="1.0.0")
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite dev server
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "kpmgesg.vercel.app"],  # Vite dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -295,14 +295,14 @@ async def upload_excel(file: UploadFile = File(...)):
 @app.get("/")
 async def root():
     """Health check endpoint"""
-    return {"message": "KPMG ESG Analytics API is running"}
+    return {"message": " ESG Analytics API is running"}
 
 @app.get("/health")
 async def health_check():
     """Detailed health check"""
     return {
         "status": "healthy",
-        "service": "KPMG ESG Analytics API",
+        "service": "ESG Analytics API",
         "version": "1.0.0"
     }
 

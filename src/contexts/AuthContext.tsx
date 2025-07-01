@@ -33,7 +33,7 @@ const mockUsers = [
     password: 'user123',
     role: 'user' as const,
     name: 'Afraz Muneer',
-    email: 'afraz.muneer@kpmg.com'
+    email: 'Afrazmuneer@kpmg.com'
   },
   {
     id: '3',

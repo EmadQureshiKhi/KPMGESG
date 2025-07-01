@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
     }`}>
       {/* Logo - Compact */}
       <div className="p-3 border-b border-slate-700 flex-shrink-0">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div className="w-13 h-12 flex items-center justify-center">
             <img 
               src="https://i.ibb.co/LXxN14Cy/pngegg.png" 
@@ -88,9 +88,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
             />
           </div>
           {!isCollapsed && (
-            <div className="flex flex-col">
-              <h1 className="text-lg font-bold text-white leading-none">KPMG</h1>
-              <p className="text-xs font-bold tracking-wider -mt-0.6">ESG Tool</p>
+            <div className="flex items-center">
+              <h1 className="text-lg font-medium text-white/90 tracking-wide">
+          ClimaSense
+        </h1>
             </div>
           )}
         </div>
@@ -101,7 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
         <div className="p-3 border-b border-slate-700 flex-shrink-0">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-xs font-medium">EQ</span>
+              <span className="text-xs font-medium">AM</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">Afraz Muneer</p>
