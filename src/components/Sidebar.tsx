@@ -30,14 +30,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
     {
       title: 'Import',
       items: [
-        { icon: Upload, label: 'Excel Upload', path: '/excel-upload' },
-        { icon: Calculator, label: 'GHG Calculator', path: '/ghg-calculator' }
+        { icon: Upload, label: 'Excel Upload', path: '/excel-upload' }
       ]
     },
     {
       title: 'Measure',
       items: [
         { icon: Home, label: 'Home', path: '/home' },
+        { icon: Calculator, label: 'GHG Calculator', path: '/ghg-calculator' },
         { icon: BarChart3, label: 'Measurements', path: '/measurements' },
         { icon: Activity, label: 'Activity data', path: '/activity-data' },
         { icon: Footprints, label: 'Footprints', path: '/footprints' }
