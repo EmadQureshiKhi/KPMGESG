@@ -1,7 +1,8 @@
 import React from 'react';
 import { Calculator, Plus, X, AlertCircle } from 'lucide-react';
 import { CalculationState, EmissionFactorsDatabase } from '../../types/ghg';
-import { unitConversions } from '../../data/emissionFactors';
+import { unitConversions, fugitiveGasFactors } from '../../data/emissionFactors';
+import SearchableDropdown from './SearchableDropdown';
 
 interface GHGCalculatorFormProps {
   currentCalculation: CalculationState;
@@ -14,6 +15,7 @@ interface GHGCalculatorFormProps {
   onAddCustomFuel: () => void;
   onDeleteCustomFuel: (fuelType: string) => void;
   getCurrentEmissionFactor: () => number;
+  questionnaireScope?: string;
 }
 
 const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
@@ -26,24 +28,39 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
   onCalculate,
   onAddCustomFuel,
   onDeleteCustomFuel,
-  getCurrentEmissionFactor
+  getCurrentEmissionFactor,
+  questionnaireScope
 }) => {
   // Get available options for dropdowns
   const getAvailableOptions = () => {
     try {
       if (currentCalculation.scope === 'Scope 1') {
         const categories = Object.keys(emissionFactors[currentCalculation.scope] || {});
-        const fuelCategories = Object.keys(emissionFactors[currentCalculation.scope][currentCalculation.category] || {});
-        const fuelTypes = Object.keys(emissionFactors[currentCalculation.scope][currentCalculation.category][currentCalculation.fuelCategory] || {});
+        
+        let fuelCategories: string[] = [];
+        let fuelTypes: string[] = [];
+        
+        if (currentCalculation.category && emissionFactors[currentCalculation.scope][currentCalculation.category]) {
+          fuelCategories = Object.keys(emissionFactors[currentCalculation.scope][currentCalculation.category]);
+          
+          if (currentCalculation.fuelCategory && emissionFactors[currentCalculation.scope][currentCalculation.category][currentCalculation.fuelCategory]) {
+            fuelTypes = Object.keys(emissionFactors[currentCalculation.scope][currentCalculation.category][currentCalculation.fuelCategory]);
+          }
+        }
         
         return { categories, fuelCategories, fuelTypes };
       } else {
         const fuelCategories = Object.keys(emissionFactors[currentCalculation.scope] || {});
-        const fuelTypes = Object.keys(emissionFactors[currentCalculation.scope][currentCalculation.fuelCategory] || {});
+        
+        let fuelTypes: string[] = [];
+        if (currentCalculation.fuelCategory && emissionFactors[currentCalculation.scope][currentCalculation.fuelCategory]) {
+          fuelTypes = Object.keys(emissionFactors[currentCalculation.scope][currentCalculation.fuelCategory]);
+        }
         
         return { categories: [], fuelCategories, fuelTypes };
       }
-    } catch {
+    } catch (error) {
+      console.error('Error getting available options:', error);
       return { categories: [], fuelCategories: [], fuelTypes: [] };
     }
   };
@@ -73,6 +90,57 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
     }
   };
 
+  // Check if current selection is fugitive gas
+  const isFugitiveGas = currentCalculation.scope === 'Scope 1' && 
+                       currentCalculation.category === 'Fugitive' && 
+                       currentCalculation.fuelCategory === 'Gas';
+
+  // Handle category change and reset dependent fields
+  const handleCategoryChange = (category: string) => {
+    setCurrentCalculation(prev => {
+      const newState = { ...prev, category };
+      
+      // Reset fuel category and fuel type when category changes
+      const newFuelCategories = Object.keys(emissionFactors[prev.scope][category] || {});
+      if (newFuelCategories.length > 0) {
+        newState.fuelCategory = newFuelCategories[0];
+        
+        // Reset fuel type based on new fuel category
+        const newFuelTypes = Object.keys(emissionFactors[prev.scope][category][newFuelCategories[0]] || {});
+        if (newFuelTypes.length > 0) {
+          newState.fuelType = newFuelTypes[0];
+        }
+      }
+      
+      return newState;
+    });
+  };
+
+  // Handle fuel category change and reset fuel type
+  const handleFuelCategoryChange = (fuelCategory: string) => {
+    setCurrentCalculation(prev => {
+      const newState = { ...prev, fuelCategory };
+      
+      // Reset fuel type when fuel category changes
+      let newFuelTypes: string[] = [];
+      if (prev.scope === 'Scope 1') {
+        newFuelTypes = Object.keys(emissionFactors[prev.scope][prev.category][fuelCategory] || {});
+      } else {
+        newFuelTypes = Object.keys(emissionFactors[prev.scope][fuelCategory] || {});
+      }
+      
+      if (newFuelTypes.length > 0) {
+        newState.fuelType = newFuelTypes[0];
+      }
+      
+      return newState;
+    });
+  };
+
+  console.log('Current calculation state:', currentCalculation);
+  console.log('Available fuel types:', fuelTypes);
+  console.log('Is fugitive gas:', isFugitiveGas);
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <h3 className="text-xl font-bold text-gray-900 mb-6">Emission Calculation</h3>
@@ -86,10 +154,21 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
         </div>
       )}
 
+      {/* Show questionnaire scope selection info */}
+      {questionnaireScope && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-800 text-sm">
+            <strong>Selected in questionnaire:</strong> {questionnaireScope}
+          </p>
+        </div>
+      )}
+
       <div className="space-y-4">
-        {/* Scope Selection */}
+        {/* Scope Selection - Auto-matched from questionnaire */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Scope</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Scope {questionnaireScope && <span className="text-blue-600">(auto-matched from questionnaire)</span>}
+          </label>
           <select
             value={currentCalculation.scope}
             onChange={(e) => setCurrentCalculation(prev => ({ ...prev, scope: e.target.value }))}
@@ -106,7 +185,7 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
             <select
               value={currentCalculation.category}
-              onChange={(e) => setCurrentCalculation(prev => ({ ...prev, category: e.target.value }))}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {categories.map(category => (
@@ -121,7 +200,7 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">Fuel Category</label>
           <select
             value={currentCalculation.fuelCategory}
-            onChange={(e) => setCurrentCalculation(prev => ({ ...prev, fuelCategory: e.target.value }))}
+            onChange={(e) => handleFuelCategoryChange(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             {fuelCategories.map(fuelCategory => (
@@ -130,18 +209,34 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
           </select>
         </div>
 
-        {/* Fuel Type */}
+        {/* Fuel Type - Use SearchableDropdown for Fugitive Gas */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Fuel Type</label>
-          <select
-            value={currentCalculation.fuelType}
-            onChange={(e) => setCurrentCalculation(prev => ({ ...prev, fuelType: e.target.value }))}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {fuelTypes.map(fuelType => (
-              <option key={fuelType} value={fuelType}>{fuelType}</option>
-            ))}
-          </select>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Fuel Type
+            {isFugitiveGas && (
+              <span className="text-xs text-gray-500 ml-2">({fuelTypes.length} gases available)</span>
+            )}
+          </label>
+          
+          {isFugitiveGas ? (
+            <SearchableDropdown
+              options={fuelTypes}
+              value={currentCalculation.fuelType}
+              onChange={(value) => setCurrentCalculation(prev => ({ ...prev, fuelType: value }))}
+              placeholder="Search for a gas type..."
+              className="w-full"
+            />
+          ) : (
+            <select
+              value={currentCalculation.fuelType}
+              onChange={(e) => setCurrentCalculation(prev => ({ ...prev, fuelType: e.target.value }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {fuelTypes.map(fuelType => (
+                <option key={fuelType} value={fuelType}>{fuelType}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Custom Fuel Management */}
@@ -253,8 +348,13 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
           {/* Emission Factor Display */}
           <div className="mt-3 p-3 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-700">
-              <span className="font-medium">Emission Factor:</span> {getCurrentEmissionFactor()} kg CO2e/unit
+              <span className="font-medium">Emission Factor:</span> {getCurrentEmissionFactor().toLocaleString()} kg CO2e/unit
             </p>
+            {isFugitiveGas && currentCalculation.fuelType && (
+              <p className="text-xs text-blue-600 mt-1">
+                Global Warming Potential (GWP) factor for {currentCalculation.fuelType}
+              </p>
+            )}
           </div>
         </div>
 

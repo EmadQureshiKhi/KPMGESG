@@ -1,7 +1,6 @@
 import React from 'react';
 import { ArrowRight, AlertCircle } from 'lucide-react';
 import { QuestionnaireData } from '../../types/ghg';
-import { textileUnits } from '../../data/emissionFactors';
 
 interface GHGQuestionnaireProps {
   questionnaire: QuestionnaireData;
@@ -98,46 +97,7 @@ const GHGQuestionnaire: React.FC<GHGQuestionnaireProps> = ({
             </select>
           </div>
 
-          {/* Industry Info */}
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="font-medium text-blue-900">Industry: Textile Manufacturing</p>
-          </div>
-
-          {/* Textile Units Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Select Textile Units * (Choose up to 5)</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {textileUnits.map((unit) => (
-                <label key={unit} className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={questionnaire.selectedUnits.includes(unit)}
-                    onChange={(e) => {
-                      if (e.target.checked && questionnaire.selectedUnits.length < 5) {
-                        setQuestionnaire(prev => ({
-                          ...prev,
-                          selectedUnits: [...prev.selectedUnits, unit]
-                        }));
-                      } else if (!e.target.checked) {
-                        setQuestionnaire(prev => ({
-                          ...prev,
-                          selectedUnits: prev.selectedUnits.filter(u => u !== unit)
-                        }));
-                      }
-                    }}
-                    disabled={!questionnaire.selectedUnits.includes(unit) && questionnaire.selectedUnits.length >= 5}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">{unit}</span>
-                </label>
-              ))}
-            </div>
-            <p className="text-sm text-gray-500 mt-2">
-              Selected: {questionnaire.selectedUnits.length}/5 units
-            </p>
-          </div>
-
-          {/* Emission Sources */}
+          {/* Emission Sources - Removed "Both Scope 1 & 2" option */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">What are your emission sources? *</label>
             <select
@@ -148,7 +108,6 @@ const GHGQuestionnaire: React.FC<GHGQuestionnaireProps> = ({
               <option value="">Select emission sources</option>
               <option value="Scope 1 (direct emissions)">Scope 1 (direct emissions)</option>
               <option value="Scope 2 (indirect emissions)">Scope 2 (indirect emissions)</option>
-              <option value="Both Scope 1 & 2">Both Scope 1 & 2</option>
             </select>
           </div>
         </div>

@@ -3,31 +3,27 @@ import { Lightbulb, Leaf } from 'lucide-react';
 import { EmissionEntry } from '../../types/ghg';
 
 interface GHGResultsSidebarProps {
-  currentUnit: string;
   entries: EmissionEntry[];
   totalEmissions: number;
 }
 
 const GHGResultsSidebar: React.FC<GHGResultsSidebarProps> = ({
-  currentUnit,
   entries,
   totalEmissions
 }) => {
-  const currentUnitEntries = entries.filter(e => e.unit === currentUnit);
-
   return (
     <div className="space-y-6">
-      {/* Current Unit Results */}
+      {/* Current Session Results */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-bold text-gray-900 mb-4">
-          {currentUnit} Results
+          Current Session
         </h3>
         
-        {currentUnitEntries.length === 0 ? (
-          <p className="text-gray-600 text-sm">No calculations yet for this unit</p>
+        {entries.length === 0 ? (
+          <p className="text-gray-600 text-sm">No calculations yet</p>
         ) : (
           <div className="space-y-3">
-            {currentUnitEntries.map(entry => (
+            {entries.slice(-5).map(entry => (
               <div key={entry.id} className="p-3 bg-gray-50 rounded-lg">
                 <p className="font-medium text-gray-900">{entry.fuelType}</p>
                 <p className="text-sm text-gray-600">{entry.scope} • {entry.fuelCategory}</p>
@@ -36,6 +32,11 @@ const GHGResultsSidebar: React.FC<GHGResultsSidebarProps> = ({
                 </p>
               </div>
             ))}
+            {entries.length > 5 && (
+              <p className="text-xs text-gray-500 text-center">
+                Showing last 5 calculations
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -76,7 +77,7 @@ const GHGResultsSidebar: React.FC<GHGResultsSidebarProps> = ({
         <ul className="space-y-2 text-sm text-blue-800">
           <li>• Use consistent units for accurate calculations</li>
           <li>• Add custom fuel types for specific materials</li>
-          <li>• Calculate all units for comprehensive assessment</li>
+          <li>• Calculate all emission sources for comprehensive assessment</li>
           <li>• Review results before generating final report</li>
         </ul>
       </div>

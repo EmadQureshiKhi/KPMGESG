@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, ArrowRight, Calculator } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 import { useGHGCalculator } from '../hooks/useGHGCalculator';
 import GHGQuestionnaire from '../components/ghg/GHGQuestionnaire';
 import GHGCalculatorForm from '../components/ghg/GHGCalculatorForm';
@@ -10,7 +10,6 @@ const GHGCalculator: React.FC = () => {
   const {
     currentStep,
     setCurrentStep,
-    currentUnitIndex,
     questionnaire,
     setQuestionnaire,
     entries,
@@ -26,17 +25,20 @@ const GHGCalculator: React.FC = () => {
     addCustomFuel,
     deleteCustomFuel,
     getCurrentEmissionFactor,
-    goToNextUnit,
-    goToPreviousUnit
+    goToResults
   } = useGHGCalculator();
+
+  console.log('GHGCalculator render - Current step:', currentStep);
+  console.log('GHGCalculator render - Entries:', entries.length);
+  console.log('GHGCalculator render - Questionnaire:', questionnaire);
 
   if (currentStep === 'questionnaire') {
     return (
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2"> GHG Calculator</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">GHG Emissions Calculator</h1>
           <p className="text-gray-600">
-            Comprehensive greenhouse gas emissions assessment 
+            Comprehensive greenhouse gas emissions assessment for your organization
           </p>
         </div>
         
@@ -51,6 +53,7 @@ const GHGCalculator: React.FC = () => {
   }
 
   if (currentStep === 'results') {
+    console.log('Rendering results page with:', { questionnaire, entries: entries.length, totalEmissions });
     return (
       <div className="p-6 bg-gray-50 min-h-screen">
         <GHGResults
@@ -65,10 +68,6 @@ const GHGCalculator: React.FC = () => {
   }
 
   // Calculator step
-  const currentUnit = questionnaire.selectedUnits[currentUnitIndex];
-  const isFirstUnit = currentUnitIndex === 0;
-  const isLastUnit = currentUnitIndex === questionnaire.selectedUnits.length - 1;
-
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Header with Green Calculator Logo */}
@@ -84,7 +83,7 @@ const GHGCalculator: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">GHG Calculator</h1>
             <p className="text-sm text-gray-600">
-              Calculating emissions for: <span className="font-semibold text-gray-900">{currentUnit}</span> ({currentUnitIndex + 1} of {questionnaire.selectedUnits.length})
+              Calculate greenhouse gas emissions for your organization
             </p>
           </div>
         </div>
@@ -92,7 +91,7 @@ const GHGCalculator: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-gray-600">
-            <span className="font-medium">{questionnaire.orgName}</span> • Unit {currentUnitIndex + 1} of {questionnaire.selectedUnits.length}
+            <span className="font-medium">{questionnaire.orgName || 'Organization'}</span> • {entries.length} calculations
           </div>
           
           <div className="flex items-center space-x-2">
@@ -100,11 +99,10 @@ const GHGCalculator: React.FC = () => {
               onClick={() => setCurrentStep('questionnaire')}
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg px-3 py-2"
             >
-              <ArrowLeft className="w-4 h-4" />
               <span>Back to Questionnaire</span>
             </button>
             <button
-              onClick={() => setCurrentStep('results')}
+              onClick={goToResults}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
             >
               View All Results
@@ -114,26 +112,26 @@ const GHGCalculator: React.FC = () => {
 
         {/* Configuration Summary */}
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">
-          <h3 className="font-medium text-gray-900 mb-2">Selected Configuration:</h3>
+          <h3 className="font-medium text-gray-900 mb-2">Assessment Configuration:</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-gray-600">Organizational Boundary:</span>
-              <p className="font-medium">{questionnaire.boundaryApproach}</p>
+              <p className="font-medium">{questionnaire.boundaryApproach || 'Not set'}</p>
               {questionnaire.controlSubtype && (
                 <p className="text-gray-600">→ {questionnaire.controlSubtype}</p>
               )}
             </div>
             <div>
               <span className="text-gray-600">Operational Boundary:</span>
-              <p className="font-medium">{questionnaire.operationalBoundary}</p>
-            </div>
-            <div>
-              <span className="text-gray-600">Current Unit:</span>
-              <p className="font-medium">{currentUnit}</p>
+              <p className="font-medium">{questionnaire.operationalBoundary || 'Not set'}</p>
             </div>
             <div>
               <span className="text-gray-600">Emission Sources:</span>
-              <p className="font-medium">{questionnaire.emissionSources}</p>
+              <p className="font-medium">{questionnaire.emissionSources || 'Not set'}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">Total Calculations:</span>
+              <p className="font-medium">{entries.length} activities</p>
             </div>
           </div>
         </div>
@@ -154,67 +152,13 @@ const GHGCalculator: React.FC = () => {
             onAddCustomFuel={addCustomFuel}
             onDeleteCustomFuel={deleteCustomFuel}
             getCurrentEmissionFactor={getCurrentEmissionFactor}
+            questionnaireScope={questionnaire.emissionSources}
           />
-
-          {/* Navigation */}
-          <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Unit Navigation</h3>
-            <div className="flex items-center justify-between">
-              <button
-                onClick={goToPreviousUnit}
-                disabled={isFirstUnit}
-                className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Previous Unit</span>
-              </button>
-
-              <div className="text-center">
-                <p className="text-sm text-gray-600">Progress</p>
-                <p className="font-medium text-gray-900">
-                  {currentUnitIndex + 1} of {questionnaire.selectedUnits.length}
-                </p>
-              </div>
-
-              <button
-                onClick={goToNextUnit}
-                disabled={isLastUnit}
-                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span>Next Unit</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Unit Progress Bar */}
-            <div className="mt-4">
-              <div className="flex space-x-1">
-                {questionnaire.selectedUnits.map((unit, index) => (
-                  <div
-                    key={unit}
-                    className={`flex-1 h-2 rounded ${
-                      index === currentUnitIndex
-                        ? 'bg-blue-600'
-                        : index < currentUnitIndex
-                        ? 'bg-green-500'
-                        : 'bg-gray-200'
-                    }`}
-                    title={unit}
-                  />
-                ))}
-              </div>
-              <div className="flex justify-between mt-2 text-xs text-gray-600">
-                <span>Start</span>
-                <span>Complete</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Results Sidebar */}
         <div>
           <GHGResultsSidebar
-            currentUnit={currentUnit}
             entries={entries}
             totalEmissions={totalEmissions}
           />

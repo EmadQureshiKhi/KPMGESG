@@ -67,12 +67,9 @@ const createQuestionnaireData = (questionnaire: QuestionnaireData): any[] => {
     'Organizational Boundary': questionnaire.boundaryApproach,
     'Control Approach': questionnaire.boundaryApproach === 'Control Approach' ? questionnaire.controlSubtype : 'N/A',
     'Operational Boundary': questionnaire.operationalBoundary,
-    'Industry': 'Textile Manufacturing',
-    'Selected Units': questionnaire.selectedUnits.join(', '),
     'Emission Sources': questionnaire.emissionSources,
     'Report Date': formatDate(questionnaire.timestamp),
     'Assessment Scope': questionnaire.emissionSources,
-    'Number of Units Selected': questionnaire.selectedUnits.length,
     'Boundary Approach Type': questionnaire.boundaryApproach,
     'Control Type': questionnaire.controlSubtype || 'N/A',
     'Assessment Timestamp': questionnaire.timestamp,
@@ -83,7 +80,6 @@ const createQuestionnaireData = (questionnaire: QuestionnaireData): any[] => {
 // Create calculations sheet data
 const createCalculationsData = (entries: EmissionEntry[]): any[] => {
   return entries.map(entry => ({
-    'Unit': entry.unit,
     'Scope': entry.scope,
     'Category': entry.category || '',
     'Fuel Category': entry.fuelCategory,
@@ -106,13 +102,6 @@ const createCalculationsData = (entries: EmissionEntry[]): any[] => {
 const createSummaryData = (data: ExportData): any[] => {
   const { questionnaire, entries, totalEmissions } = data;
   
-  // Calculate emissions by unit
-  const emissionsByUnit = questionnaire.selectedUnits.map(unit => {
-    const unitEntries = entries.filter(entry => entry.unit === unit);
-    const total = unitEntries.reduce((sum, entry) => sum + entry.emissions, 0);
-    return { unit, total, count: unitEntries.length };
-  });
-
   // Calculate emissions by scope
   const scope1Emissions = entries.filter(e => e.scope === 'Scope 1').reduce((sum, e) => sum + e.emissions, 0);
   const scope2Emissions = entries.filter(e => e.scope === 'Scope 2').reduce((sum, e) => sum + e.emissions, 0);
@@ -126,46 +115,54 @@ const createSummaryData = (data: ExportData): any[] => {
     'Scope 2 Emissions (kg CO2e)': scope2Emissions,
     'Scope 2 Emissions (tonnes CO2e)': scope2Emissions / 1000,
     'Total Activities': entries.length,
-    'Units Assessed': questionnaire.selectedUnits.length,
-    'Units with Calculations': emissionsByUnit.filter(u => u.count > 0).length,
     'Assessment Date': formatDate(questionnaire.timestamp),
     'Report Generated': new Date().toLocaleString(),
     'Emission Sources': questionnaire.emissionSources,
     'Organizational Boundary': questionnaire.boundaryApproach,
     'Operational Boundary': questionnaire.operationalBoundary,
-    'Industry Sector': 'Textile Manufacturing',
-    'Assessment Completeness (%)': Math.round((emissionsByUnit.filter(u => u.count > 0).length / questionnaire.selectedUnits.length) * 100),
     'Data Quality Score': 'Good',
     'Verification Required': 'Yes'
   }];
 };
 
-// Create unit breakdown sheet data
-const createUnitBreakdownData = (data: ExportData): any[] => {
-  const { questionnaire, entries } = data;
+// Create activity breakdown sheet data
+const createActivityBreakdownData = (data: ExportData): any[] => {
+  const { entries } = data;
   
-  return questionnaire.selectedUnits.map(unit => {
-    const unitEntries = entries.filter(entry => entry.unit === unit);
-    const totalEmissions = unitEntries.reduce((sum, entry) => sum + entry.emissions, 0);
-    const scope1Emissions = unitEntries.filter(e => e.scope === 'Scope 1').reduce((sum, e) => sum + e.emissions, 0);
-    const scope2Emissions = unitEntries.filter(e => e.scope === 'Scope 2').reduce((sum, e) => sum + e.emissions, 0);
-    
-    return {
-      'Unit Name': unit,
-      'Total Emissions (kg CO2e)': totalEmissions,
-      'Total Emissions (tonnes CO2e)': totalEmissions / 1000,
-      'Scope 1 Emissions (kg CO2e)': scope1Emissions,
-      'Scope 1 Emissions (tonnes CO2e)': scope1Emissions / 1000,
-      'Scope 2 Emissions (kg CO2e)': scope2Emissions,
-      'Scope 2 Emissions (tonnes CO2e)': scope2Emissions / 1000,
-      'Number of Activities': unitEntries.length,
-      'Percentage of Total Emissions': totalEmissions > 0 ? ((totalEmissions / data.totalEmissions) * 100).toFixed(2) + '%' : '0%',
-      'Assessment Status': unitEntries.length > 0 ? 'Completed' : 'Pending',
-      'Last Updated': unitEntries.length > 0 ? formatDate(unitEntries[unitEntries.length - 1].timestamp) : 'N/A',
-      'Primary Fuel Types': unitEntries.map(e => e.fuelType).filter((v, i, a) => a.indexOf(v) === i).join(', ') || 'None',
-      'Data Quality': unitEntries.length > 0 ? 'Good' : 'N/A'
-    };
-  });
+  // Group by fuel type
+  const fuelTypeGroups = entries.reduce((acc, entry) => {
+    const key = `${entry.scope} - ${entry.fuelType}`;
+    if (!acc[key]) {
+      acc[key] = {
+        scope: entry.scope,
+        category: entry.category,
+        fuelCategory: entry.fuelCategory,
+        fuelType: entry.fuelType,
+        totalEmissions: 0,
+        count: 0,
+        totalAmount: 0,
+        unit: entry.unit_type
+      };
+    }
+    acc[key].totalEmissions += entry.emissions;
+    acc[key].count += 1;
+    acc[key].totalAmount += entry.amount;
+    return acc;
+  }, {} as any);
+  
+  return Object.values(fuelTypeGroups).map((group: any) => ({
+    'Scope': group.scope,
+    'Category': group.category || '',
+    'Fuel Category': group.fuelCategory,
+    'Fuel Type': group.fuelType,
+    'Total Amount': group.totalAmount,
+    'Unit': group.unit,
+    'Total Emissions (kg CO2e)': group.totalEmissions,
+    'Total Emissions (tonnes CO2e)': group.totalEmissions / 1000,
+    'Number of Activities': group.count,
+    'Percentage of Total Emissions': ((group.totalEmissions / data.totalEmissions) * 100).toFixed(2) + '%',
+    'Average per Activity': (group.totalEmissions / group.count).toFixed(2) + ' kg CO2e'
+  }));
 };
 
 // Export to Excel
@@ -190,10 +187,10 @@ export const exportToExcel = async (data: ExportData, format: 'excel' | 'csv' = 
   const calculationsWS = XLSX.utils.json_to_sheet(calculationsData);
   XLSX.utils.book_append_sheet(wb, calculationsWS, 'Calculations');
   
-  // Sheet 4: Unit Breakdown
-  const unitBreakdownData = createUnitBreakdownData(data);
-  const unitBreakdownWS = XLSX.utils.json_to_sheet(unitBreakdownData);
-  XLSX.utils.book_append_sheet(wb, unitBreakdownWS, 'Unit Breakdown');
+  // Sheet 4: Activity Breakdown
+  const activityBreakdownData = createActivityBreakdownData(data);
+  const activityBreakdownWS = XLSX.utils.json_to_sheet(activityBreakdownData);
+  XLSX.utils.book_append_sheet(wb, activityBreakdownWS, 'Activity Breakdown');
   
   // Sheet 5: Custom Fuels (only if custom fuels exist)
   const customFuels = getCustomFuels(emissionFactors);
@@ -219,7 +216,7 @@ export const exportToExcel = async (data: ExportData, format: 'excel' | 'csv' = 
       { name: 'Questionnaire', data: questionnaireData },
       { name: 'Summary', data: summaryData },
       { name: 'Calculations', data: calculationsData },
-      { name: 'Unit_Breakdown', data: unitBreakdownData }
+      { name: 'Activity_Breakdown', data: activityBreakdownData }
     ];
     
     if (customFuels.length > 0) {

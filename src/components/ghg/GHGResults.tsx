@@ -21,14 +21,11 @@ const GHGResults: React.FC<GHGResultsProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv'>('excel');
 
-  // Calculate emissions by unit
-  const emissionsByUnit = questionnaire.selectedUnits.map(unit => {
-    const unitEntries = entries.filter(entry => entry.unit === unit);
-    const total = unitEntries.reduce((sum, entry) => sum + entry.emissions, 0);
-    return { unit, total, count: unitEntries.length };
-  });
+  console.log('GHGResults rendered with:', { questionnaire, entries: entries.length, totalEmissions });
 
-  const calculatedUnits = emissionsByUnit.filter(u => u.count > 0).length;
+  // Calculate emissions by scope
+  const scope1Emissions = entries.filter(e => e.scope === 'Scope 1').reduce((sum, e) => sum + e.emissions, 0);
+  const scope2Emissions = entries.filter(e => e.scope === 'Scope 2').reduce((sum, e) => sum + e.emissions, 0);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -56,7 +53,7 @@ const GHGResults: React.FC<GHGResultsProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">All Calculation Results</h2>
-            <p className="text-gray-600">{questionnaire.orgName} • {entries.length} calculations</p>
+            <p className="text-gray-600">{questionnaire.orgName || 'Organization'} • {entries.length} calculations</p>
           </div>
           <div className="flex items-center space-x-2">
             <button
@@ -112,7 +109,7 @@ const GHGResults: React.FC<GHGResultsProps> = ({
                 <strong>Calculations Sheet:</strong> Detailed emission calculations ({entries.length} entries)
               </div>
               <div>
-                <strong>Unit Breakdown Sheet:</strong> Emissions by textile unit ({questionnaire.selectedUnits.length} units)
+                <strong>Activity Breakdown Sheet:</strong> Emissions by fuel type and scope
               </div>
               {Object.values(emissionFactors).some(scope => 
                 Object.values(scope).some(category => 
@@ -149,22 +146,24 @@ const GHGResults: React.FC<GHGResultsProps> = ({
           
           {/* Content */}
           <div className="relative z-10 grid grid-cols-3 gap-8">
-            {/* Units Calculated */}
+            {/* Scope 1 Emissions */}
             <div>
-              <h3 className="text-lg font-bold mb-2 text-white">Units Calculated</h3>
+              <h3 className="text-lg font-bold mb-2 text-white">Scope 1 Emissions</h3>
               <div className="flex items-baseline space-x-2 mb-2">
-                <span className="text-4xl font-bold">{calculatedUnits}</span>
+                <span className="text-4xl font-bold">{(scope1Emissions / 1000).toFixed(2)}</span>
+                <span className="text-lg font-medium">tonnes</span>
               </div>
-              <p className="text-green-100 text-sm">of {questionnaire.selectedUnits.length} units</p>
+              <p className="text-green-100 text-sm">direct emissions</p>
             </div>
 
-            {/* Total Activities */}
+            {/* Scope 2 Emissions */}
             <div>
-              <h3 className="text-lg font-bold mb-2 text-white">Total Activities</h3>
+              <h3 className="text-lg font-bold mb-2 text-white">Scope 2 Emissions</h3>
               <div className="flex items-baseline space-x-2 mb-2">
-                <span className="text-4xl font-bold">{entries.length}</span>
+                <span className="text-4xl font-bold">{(scope2Emissions / 1000).toFixed(2)}</span>
+                <span className="text-lg font-medium">tonnes</span>
               </div>
-              <p className="text-green-100 text-sm">emission sources</p>
+              <p className="text-green-100 text-sm">indirect emissions</p>
             </div>
 
             {/* Total CO2 Equivalent */}
@@ -174,7 +173,7 @@ const GHGResults: React.FC<GHGResultsProps> = ({
                 <span className="text-4xl font-bold">{(totalEmissions / 1000).toFixed(2)}</span>
                 <span className="text-lg font-medium">tonnes</span>
               </div>
-              <p className="text-green-100 text-sm">carbon footprint</p>
+              <p className="text-green-100 text-sm">{entries.length} activities</p>
             </div>
           </div>
         </div>
@@ -197,20 +196,19 @@ const GHGResults: React.FC<GHGResultsProps> = ({
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left p-4 text-sm font-medium text-gray-600">Unit</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Scope</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Category</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Fuel Type</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Amount</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Emission Factor</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Total Emissions</th>
+                  <th className="text-left p-4 text-sm font-medium text-gray-600">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {entries.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50">
-                    <td className="p-4 font-medium text-gray-900">{entry.unit}</td>
-                    <td className="p-4 text-gray-600">{entry.scope}</td>
+                    <td className="p-4 font-medium text-gray-900">{entry.scope}</td>
                     <td className="p-4 text-gray-600">
                       {entry.category && `${entry.category} • `}{entry.fuelCategory}
                     </td>
@@ -218,6 +216,9 @@ const GHGResults: React.FC<GHGResultsProps> = ({
                     <td className="p-4 text-gray-600">{entry.amount} {entry.unit_type}</td>
                     <td className="p-4 text-gray-600">{entry.convertedFactor.toFixed(6)} kg CO2e/{entry.unit_type}</td>
                     <td className="p-4 font-medium text-gray-900">{entry.emissions.toFixed(2)} kg CO2e</td>
+                    <td className="p-4 text-gray-500 text-sm">
+                      {new Date(entry.timestamp).toLocaleDateString()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -226,30 +227,49 @@ const GHGResults: React.FC<GHGResultsProps> = ({
         )}
       </div>
 
-      {/* Emissions by Unit */}
-      <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Emissions by Unit</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {emissionsByUnit.map((unitData) => (
-            <div key={unitData.unit} className="p-4 border border-gray-200 rounded-lg">
-              <h4 className="font-medium text-gray-900">{unitData.unit}</h4>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{unitData.total.toFixed(2)} kg CO2e</p>
-              <p className="text-sm text-gray-600">{unitData.count} calculations</p>
-              <div className="mt-2">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-green-600 h-2 rounded-full" 
-                    style={{ width: `${totalEmissions > 0 ? (unitData.total / totalEmissions) * 100 : 0}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {totalEmissions > 0 ? ((unitData.total / totalEmissions) * 100).toFixed(1) : 0}% of total
-                </p>
+      {/* Emissions by Scope Breakdown */}
+      {entries.length > 0 && (
+        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Emissions Breakdown by Scope</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Scope 1 */}
+            <div className="p-4 border border-gray-200 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Scope 1 (Direct Emissions)</h4>
+              <p className="text-2xl font-bold text-gray-900 mb-1">{scope1Emissions.toFixed(2)} kg CO2e</p>
+              <p className="text-sm text-gray-600 mb-2">
+                {entries.filter(e => e.scope === 'Scope 1').length} activities
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full" 
+                  style={{ width: `${totalEmissions > 0 ? (scope1Emissions / totalEmissions) * 100 : 0}%` }}
+                ></div>
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {totalEmissions > 0 ? ((scope1Emissions / totalEmissions) * 100).toFixed(1) : 0}% of total
+              </p>
             </div>
-          ))}
+
+            {/* Scope 2 */}
+            <div className="p-4 border border-gray-200 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Scope 2 (Indirect Emissions)</h4>
+              <p className="text-2xl font-bold text-gray-900 mb-1">{scope2Emissions.toFixed(2)} kg CO2e</p>
+              <p className="text-sm text-gray-600 mb-2">
+                {entries.filter(e => e.scope === 'Scope 2').length} activities
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-green-600 h-2 rounded-full" 
+                  style={{ width: `${totalEmissions > 0 ? (scope2Emissions / totalEmissions) * 100 : 0}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {totalEmissions > 0 ? ((scope2Emissions / totalEmissions) * 100).toFixed(1) : 0}% of total
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
