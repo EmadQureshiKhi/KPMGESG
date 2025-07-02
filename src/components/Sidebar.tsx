@@ -15,7 +15,8 @@ import {
   Settings,
   HelpCircle,
   ChevronDown,
-  Upload
+  Upload,
+  Calculator
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -29,7 +30,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
     {
       title: 'Import',
       items: [
-        { icon: Upload, label: 'Excel Upload', path: '/excel-upload' }
+        { icon: Upload, label: 'Excel Upload', path: '/excel-upload' },
+        { icon: Calculator, label: 'GHG Calculator', path: '/ghg-calculator' }
       ]
     },
     {
@@ -89,9 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
           </div>
           {!isCollapsed && (
             <div className="flex items-center">
-              <h1 className="text-lg font-medium text-white/90 tracking-wide">
-          ClimaSense
-        </h1>
+              <h1 className="text-lg font-medium text-white/90 tracking-wide">ClimaSense</h1>
             </div>
           )}
         </div>
@@ -167,37 +167,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
           ))}
         </ul>
       </div>
-
-      {/* Custom Scrollbar Styles */}
-      <style jsx>{`
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: #475569 #1e293b;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #1e293b;
-          border-radius: 3px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #475569;
-          border-radius: 3px;
-          transition: background-color 0.2s ease;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #64748b;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-corner {
-          background: #1e293b;
-        }
-      `}</style>
     </div>
   );
 };

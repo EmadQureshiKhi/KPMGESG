@@ -20,6 +20,7 @@ import DisclosuresAndReports from './pages/DisclosuresAndReports';
 import ReductionPlans from './pages/ReductionPlans';
 import Marketplace from './pages/Marketplace';
 import ExcelUpload from './pages/ExcelUpload';
+import GHGCalculator from './pages/GHGCalculator';
 
 function App() {
   return (
@@ -52,6 +53,14 @@ function App() {
               <ProtectedRoute requiredRole="user">
                 <UserLayout>
                   <ExcelUpload />
+                </UserLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/ghg-calculator" element={
+              <ProtectedRoute requiredRole="user">
+                <UserLayout>
+                  <GHGCalculator />
                 </UserLayout>
               </ProtectedRoute>
             } />
