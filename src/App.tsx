@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { DataPersistenceProvider } from './contexts/DataPersistenceContext';
 import { DataProvider } from './contexts/DataContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
@@ -21,140 +22,151 @@ import ReductionPlans from './pages/ReductionPlans';
 import Marketplace from './pages/Marketplace';
 import ExcelUpload from './pages/ExcelUpload';
 import GHGCalculator from './pages/GHGCalculator';
+import Settings from './pages/Settings';
 
 function App() {
   return (
     <AuthProvider>
-      <DataProvider>
-        <Router>
-          <Routes>
-            {/* Public Route - Login */}
-            <Route path="/" element={<Login />} />
-            
-            {/* Admin Routes */}
-            <Route path="/admin" element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminLayout>
-                  <AdminDashboard />
-                </AdminLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* User Routes */}
-            <Route path="/home" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <Dashboard />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/excel-upload" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <ExcelUpload />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/ghg-calculator" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <GHGCalculator />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/supply-chain" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <SupplyChain />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/measurements" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <Measurements />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/activity-data" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <ActivityData />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/footprints" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <Footprints />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/overview" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <Overview />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/drilldown" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <Drilldown />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/products-and-materials" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <ProductsAndMaterials />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/benchmarks" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <Benchmarks />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/disclosures-and-reports" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <DisclosuresAndReports />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/reduction-plans" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <ReductionPlans />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/marketplace" element={
-              <ProtectedRoute requiredRole="user">
-                <UserLayout>
-                  <Marketplace />
-                </UserLayout>
-              </ProtectedRoute>
-            } />
-          </Routes>
-        </Router>
-      </DataProvider>
+      <DataPersistenceProvider>
+        <DataProvider>
+          <Router>
+            <Routes>
+              {/* Public Route - Login */}
+              <Route path="/" element={<Login />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminLayout>
+                    <AdminDashboard />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              
+              {/* User Routes */}
+              <Route path="/home" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <Dashboard />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/excel-upload" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <ExcelUpload />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/ghg-calculator" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <GHGCalculator />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/supply-chain" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <SupplyChain />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/measurements" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <Measurements />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/activity-data" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <ActivityData />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/footprints" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <Footprints />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/overview" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <Overview />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/drilldown" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <Drilldown />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/products-and-materials" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <ProductsAndMaterials />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/benchmarks" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <Benchmarks />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/disclosures-and-reports" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <DisclosuresAndReports />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/reduction-plans" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <ReductionPlans />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/marketplace" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <Marketplace />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/settings" element={
+                <ProtectedRoute requiredRole="user">
+                  <UserLayout>
+                    <Settings />
+                  </UserLayout>
+                </ProtectedRoute>
+              } />
+            </Routes>
+          </Router>
+        </DataProvider>
+      </DataPersistenceProvider>
     </AuthProvider>
   );
 }

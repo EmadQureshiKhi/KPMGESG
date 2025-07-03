@@ -1,35 +1,68 @@
 import React from 'react';
-import { Lightbulb, Leaf } from 'lucide-react';
+import { Lightbulb, Leaf, Trash2, X } from 'lucide-react';
 import { EmissionEntry } from '../../types/ghg';
 
 interface GHGResultsSidebarProps {
   entries: EmissionEntry[];
   totalEmissions: number;
+  onDeleteEntry?: (entryId: string) => void;
+  onDeleteAll?: () => void;
 }
 
 const GHGResultsSidebar: React.FC<GHGResultsSidebarProps> = ({
   entries,
-  totalEmissions
+  totalEmissions,
+  onDeleteEntry,
+  onDeleteAll
 }) => {
   return (
     <div className="space-y-6">
       {/* Current Session Results */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">
-          Current Session
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">
+            Current Session
+          </h3>
+          
+          {/* Delete All Button */}
+          {entries.length > 0 && onDeleteAll && (
+            <button
+              onClick={onDeleteAll}
+              className="flex items-center space-x-1 px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+              title="Delete all entries"
+            >
+              <X className="w-4 h-4" />
+              <span>Delete All</span>
+            </button>
+          )}
+        </div>
         
         {entries.length === 0 ? (
           <p className="text-gray-600 text-sm">No calculations yet</p>
         ) : (
           <div className="space-y-3">
             {entries.slice(-5).map(entry => (
-              <div key={entry.id} className="p-3 bg-gray-50 rounded-lg">
-                <p className="font-medium text-gray-900">{entry.fuelType}</p>
-                <p className="text-sm text-gray-600">{entry.scope} • {entry.fuelCategory}</p>
-                <p className="text-sm text-gray-900">
-                  {entry.amount} {entry.unit_type} = <span className="font-medium">{entry.emissions.toFixed(2)} kg CO2e</span>
-                </p>
+              <div key={entry.id} className="p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{entry.fuelType}</p>
+                    <p className="text-sm text-gray-600">{entry.scope} • {entry.fuelCategory}</p>
+                    <p className="text-sm text-gray-900">
+                      {entry.amount} {entry.unit_type} = <span className="font-medium">{entry.emissions.toFixed(2)} kg CO2e</span>
+                    </p>
+                  </div>
+                  
+                  {/* Delete Button */}
+                  {onDeleteEntry && (
+                    <button
+                      onClick={() => onDeleteEntry(entry.id)}
+                      className="ml-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      title="Delete this entry"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
             {entries.length > 5 && (
@@ -79,6 +112,7 @@ const GHGResultsSidebar: React.FC<GHGResultsSidebarProps> = ({
           <li>• Add custom fuel types for specific materials</li>
           <li>• Calculate all emission sources for comprehensive assessment</li>
           <li>• Review results before generating final report</li>
+          <li>• Hover over entries to reveal delete option</li>
         </ul>
       </div>
     </div>

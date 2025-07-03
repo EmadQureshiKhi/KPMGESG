@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator } from 'lucide-react';
+import { Calculator, RefreshCw, RotateCcw } from 'lucide-react';
 import { useGHGCalculator } from '../hooks/useGHGCalculator';
 import GHGQuestionnaire from '../components/ghg/GHGQuestionnaire';
 import GHGCalculatorForm from '../components/ghg/GHGCalculatorForm';
@@ -20,17 +20,41 @@ const GHGCalculator: React.FC = () => {
     errors,
     emissionFactors,
     totalEmissions,
+    isDataLoaded,
     submitQuestionnaire,
     calculateEmissions,
+    deleteEntry,
+    deleteAllEntries,
     addCustomFuel,
     deleteCustomFuel,
     getCurrentEmissionFactor,
-    goToResults
+    goToResults,
+    resetToQuestionnaire,
+    refreshGHGData
   } = useGHGCalculator();
 
-  console.log('GHGCalculator render - Current step:', currentStep);
-  console.log('GHGCalculator render - Entries:', entries.length);
-  console.log('GHGCalculator render - Questionnaire:', questionnaire);
+  console.log('🔄 GHGCalculator render:', {
+    currentStep,
+    entriesCount: entries.length,
+    questionnaireComplete: !!questionnaire.orgName,
+    isDataLoaded,
+    totalEmissions
+  });
+
+  // Show loading state while data is being loaded
+  if (!isDataLoaded) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h2 className="text-lg font-medium text-gray-900 mb-2">Loading GHG Calculator</h2>
+            <p className="text-gray-600">Restoring your saved data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (currentStep === 'questionnaire') {
     return (
@@ -40,6 +64,27 @@ const GHGCalculator: React.FC = () => {
           <p className="text-gray-600">
             Comprehensive greenhouse gas emissions assessment for your organization
           </p>
+          
+          {/* Show restore info if we have saved data */}
+          {(entries.length > 0 || questionnaire.orgName) && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
+              <div className="flex items-center justify-center space-x-2">
+                <RefreshCw className="w-4 h-4 text-blue-600" />
+                <p className="text-blue-800 text-sm">
+                  <strong>Saved data found:</strong> {questionnaire.orgName && `"${questionnaire.orgName}"`} 
+                  {entries.length > 0 && ` • ${entries.length} calculations`}
+                </p>
+              </div>
+              {questionnaire.orgName && (
+                <button
+                  onClick={() => setCurrentStep('calculator')}
+                  className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  Continue with saved data →
+                </button>
+              )}
+            </div>
+          )}
         </div>
         
         <GHGQuestionnaire
@@ -53,7 +98,11 @@ const GHGCalculator: React.FC = () => {
   }
 
   if (currentStep === 'results') {
-    console.log('Rendering results page with:', { questionnaire, entries: entries.length, totalEmissions });
+    console.log('📊 Rendering results page with:', { 
+      questionnaire: questionnaire.orgName, 
+      entries: entries.length, 
+      totalEmissions 
+    });
     return (
       <div className="p-6 bg-gray-50 min-h-screen">
         <GHGResults
@@ -62,6 +111,7 @@ const GHGCalculator: React.FC = () => {
           totalEmissions={totalEmissions}
           emissionFactors={emissionFactors}
           onBackToCalculator={() => setCurrentStep('calculator')}
+          onDeleteEntry={deleteEntry}
         />
       </div>
     );
@@ -88,10 +138,35 @@ const GHGCalculator: React.FC = () => {
           </div>
         </div>
 
+        {/* Data Persistence Status */}
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <p className="text-green-800 text-sm">
+                <strong>Data automatically saved</strong> • All calculations are preserved across sessions
+              </p>
+            </div>
+            <button
+              onClick={refreshGHGData}
+              className="text-green-600 hover:text-green-700 text-sm flex items-center space-x-1"
+              title="Refresh data"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-gray-600">
             <span className="font-medium">{questionnaire.orgName || 'Organization'}</span> • {entries.length} calculations
+            {totalEmissions > 0 && (
+              <span className="ml-2 text-green-600 font-medium">
+                • {(totalEmissions / 1000).toFixed(2)} tonnes CO₂e
+              </span>
+            )}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -105,7 +180,7 @@ const GHGCalculator: React.FC = () => {
               onClick={goToResults}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
             >
-              View All Results
+              View All Results ({entries.length})
             </button>
           </div>
         </div>
@@ -161,7 +236,30 @@ const GHGCalculator: React.FC = () => {
           <GHGResultsSidebar
             entries={entries}
             totalEmissions={totalEmissions}
+            onDeleteEntry={deleteEntry}
+            onDeleteAll={deleteAllEntries}
           />
+        </div>
+      </div>
+
+      {/* Reset Option - Positioned at the bottom */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-red-900 mb-1">Reset Calculator</h4>
+              <p className="text-sm text-red-700">
+                Clear all data and return to the questionnaire. This will remove all calculations and settings.
+              </p>
+            </div>
+            <button
+              onClick={resetToQuestionnaire}
+              className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Reset All</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Download, Calculator, Leaf, FileSpreadsheet, Archive } from 'lucide-react';
+import { ArrowLeft, Download, Calculator, Leaf, FileSpreadsheet, Archive, Trash2 } from 'lucide-react';
 import { EmissionEntry, QuestionnaireData } from '../../types/ghg';
 import { exportToExcel, ExportData } from '../../utils/excelExport';
 
@@ -9,6 +9,7 @@ interface GHGResultsProps {
   totalEmissions: number;
   emissionFactors: any;
   onBackToCalculator: () => void;
+  onDeleteEntry?: (entryId: string) => void;
 }
 
 const GHGResults: React.FC<GHGResultsProps> = ({
@@ -16,7 +17,8 @@ const GHGResults: React.FC<GHGResultsProps> = ({
   entries,
   totalEmissions,
   emissionFactors,
-  onBackToCalculator
+  onBackToCalculator,
+  onDeleteEntry
 }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv'>('excel');
@@ -203,11 +205,14 @@ const GHGResults: React.FC<GHGResultsProps> = ({
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Emission Factor</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Total Emissions</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Date</th>
+                  {onDeleteEntry && (
+                    <th className="text-left p-4 text-sm font-medium text-gray-600">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50">
+                  <tr key={entry.id} className="hover:bg-gray-50 group">
                     <td className="p-4 font-medium text-gray-900">{entry.scope}</td>
                     <td className="p-4 text-gray-600">
                       {entry.category && `${entry.category} • `}{entry.fuelCategory}
@@ -219,6 +224,17 @@ const GHGResults: React.FC<GHGResultsProps> = ({
                     <td className="p-4 text-gray-500 text-sm">
                       {new Date(entry.timestamp).toLocaleDateString()}
                     </td>
+                    {onDeleteEntry && (
+                      <td className="p-4">
+                        <button
+                          onClick={() => onDeleteEntry(entry.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          title="Delete this entry"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

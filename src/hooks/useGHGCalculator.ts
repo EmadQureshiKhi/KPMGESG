@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { QuestionnaireData, EmissionEntry, CalculationState, EmissionFactorsDatabase } from '../types/ghg';
 import { initialEmissionFactors, unitConversions } from '../data/emissionFactors';
+import { useDataPersistence } from '../contexts/DataPersistenceContext';
 
 export const useGHGCalculator = () => {
+  const { saveData, loadData, removeData } = useDataPersistence();
+  
   // State management
   const [currentStep, setCurrentStep] = useState<'questionnaire' | 'calculator' | 'results'>('questionnaire');
   const [emissionFactors, setEmissionFactors] = useState<EmissionFactorsDatabase>(initialEmissionFactors);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   
   // Questionnaire state
   const [questionnaire, setQuestionnaire] = useState<QuestionnaireData>({
@@ -37,9 +41,75 @@ export const useGHGCalculator = () => {
   // Validation errors
   const [errors, setErrors] = useState<string[]>([]);
 
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    loadGHGData();
+  }, []);
+
+  // Save data to localStorage whenever state changes (but only after initial load)
+  useEffect(() => {
+    if (isDataLoaded) {
+      saveGHGData();
+    }
+  }, [questionnaire, entries, emissionFactors, currentStep, isDataLoaded]);
+
+  // Load GHG data from localStorage
+  const loadGHGData = () => {
+    try {
+      console.log('Loading GHG data from localStorage...');
+      
+      const savedQuestionnaire = loadData('ghg_questionnaire');
+      const savedEntries = loadData('ghg_entries');
+      const savedEmissionFactors = loadData('ghg_emission_factors');
+      const savedCurrentStep = loadData('ghg_current_step');
+
+      if (savedQuestionnaire && savedQuestionnaire.orgName) {
+        setQuestionnaire(savedQuestionnaire);
+        console.log('✅ Loaded GHG questionnaire:', savedQuestionnaire);
+      }
+
+      if (savedEntries && Array.isArray(savedEntries) && savedEntries.length > 0) {
+        setEntries(savedEntries);
+        console.log(`✅ Loaded ${savedEntries.length} GHG entries:`, savedEntries);
+      }
+
+      if (savedEmissionFactors) {
+        setEmissionFactors(savedEmissionFactors);
+        console.log('✅ Loaded custom emission factors');
+      }
+
+      if (savedCurrentStep && (savedCurrentStep === 'calculator' || savedCurrentStep === 'results')) {
+        // Only restore to calculator or results if we have questionnaire data
+        if (savedQuestionnaire && savedQuestionnaire.orgName) {
+          setCurrentStep(savedCurrentStep);
+          console.log(`✅ Restored to step: ${savedCurrentStep}`);
+        }
+      }
+
+      setIsDataLoaded(true);
+      console.log('✅ GHG data loading complete');
+    } catch (error) {
+      console.error('❌ Error loading GHG data from localStorage:', error);
+      setIsDataLoaded(true);
+    }
+  };
+
+  // Save GHG data to localStorage
+  const saveGHGData = () => {
+    try {
+      saveData('ghg_questionnaire', questionnaire);
+      saveData('ghg_entries', entries);
+      saveData('ghg_emission_factors', emissionFactors);
+      saveData('ghg_current_step', currentStep);
+      console.log('💾 GHG data saved to localStorage');
+    } catch (error) {
+      console.error('❌ Error saving GHG data to localStorage:', error);
+    }
+  };
+
   // Auto-match scope based on questionnaire selection
   useEffect(() => {
-    if (questionnaire.emissionSources) {
+    if (questionnaire.emissionSources && isDataLoaded) {
       let targetScope = 'Scope 1';
       
       if (questionnaire.emissionSources.includes('Scope 1')) {
@@ -53,26 +123,28 @@ export const useGHGCalculator = () => {
         scope: targetScope
       }));
     }
-  }, [questionnaire.emissionSources]);
+  }, [questionnaire.emissionSources, isDataLoaded]);
 
   // Update dependent dropdowns when scope changes
   useEffect(() => {
-    if (currentCalculation.scope === 'Scope 1') {
-      setCurrentCalculation(prev => ({
-        ...prev,
-        category: 'Stationary',
-        fuelCategory: 'Gaseous Fuels',
-        fuelType: 'Compressed Natural Gas'
-      }));
-    } else {
-      setCurrentCalculation(prev => ({
-        ...prev,
-        category: '',
-        fuelCategory: 'Electricity',
-        fuelType: 'Grid Average'
-      }));
+    if (isDataLoaded) {
+      if (currentCalculation.scope === 'Scope 1') {
+        setCurrentCalculation(prev => ({
+          ...prev,
+          category: 'Stationary',
+          fuelCategory: 'Gaseous Fuels',
+          fuelType: 'Compressed Natural Gas'
+        }));
+      } else {
+        setCurrentCalculation(prev => ({
+          ...prev,
+          category: '',
+          fuelCategory: 'Electricity',
+          fuelType: 'Grid Average'
+        }));
+      }
     }
-  }, [currentCalculation.scope]);
+  }, [currentCalculation.scope, isDataLoaded]);
 
   // Questionnaire validation
   const validateQuestionnaire = (): boolean => {
@@ -93,11 +165,13 @@ export const useGHGCalculator = () => {
   // Submit questionnaire and move to calculator
   const submitQuestionnaire = () => {
     if (validateQuestionnaire()) {
-      setQuestionnaire(prev => ({
-        ...prev,
+      const updatedQuestionnaire = {
+        ...questionnaire,
         timestamp: new Date().toISOString()
-      }));
+      };
+      setQuestionnaire(updatedQuestionnaire);
       setCurrentStep('calculator');
+      console.log('✅ Questionnaire submitted, moving to calculator');
     }
   };
 
@@ -147,10 +221,32 @@ export const useGHGCalculator = () => {
       timestamp: new Date().toISOString()
     };
 
-    setEntries(prev => [...prev, entry]);
+    setEntries(prev => {
+      const newEntries = [...prev, entry];
+      console.log('✅ New emission entry added:', entry);
+      console.log(`📊 Total entries: ${newEntries.length}`);
+      return newEntries;
+    });
+    
     // Reset amount to 0 after calculation
     setCurrentCalculation(prev => ({ ...prev, amount: 0 }));
     setErrors([]);
+  };
+
+  // Delete emission entry
+  const deleteEntry = (entryId: string) => {
+    setEntries(prev => {
+      const newEntries = prev.filter(entry => entry.id !== entryId);
+      console.log('🗑️ Entry deleted:', entryId);
+      console.log(`📊 Remaining entries: ${newEntries.length}`);
+      return newEntries;
+    });
+  };
+
+  // Delete all entries
+  const deleteAllEntries = () => {
+    setEntries([]);
+    console.log('🗑️ All entries deleted');
   };
 
   // Add custom fuel type
@@ -186,6 +282,7 @@ export const useGHGCalculator = () => {
       // Reset custom fuel form
       setCustomFuel({ name: '', factor: 0 });
       setErrors([]);
+      console.log('✅ Custom fuel added:', customFuel.name);
     } catch (error) {
       console.error('Error adding custom fuel:', error);
       setErrors(['Failed to add custom fuel. Please try again.']);
@@ -215,6 +312,7 @@ export const useGHGCalculator = () => {
       if (remainingFuels.length > 0) {
         setCurrentCalculation(prev => ({ ...prev, fuelType: remainingFuels[0] }));
       }
+      console.log('✅ Custom fuel deleted:', fuelType);
     } catch (error) {
       console.error('Error deleting custom fuel:', error);
       setErrors(['Failed to delete custom fuel. Please try again.']);
@@ -226,8 +324,49 @@ export const useGHGCalculator = () => {
 
   // Navigate to results - ensure we have valid data
   const goToResults = () => {
-    console.log('Navigating to results with:', { questionnaire, entries, totalEmissions });
+    console.log('🔄 Navigating to results with:', { 
+      questionnaire: questionnaire.orgName, 
+      entries: entries.length, 
+      totalEmissions 
+    });
     setCurrentStep('results');
+  };
+
+  // Clear all GHG data (useful for starting fresh)
+  const clearAllGHGData = () => {
+    setQuestionnaire({
+      orgName: '',
+      boundaryApproach: '',
+      controlSubtype: '',
+      operationalBoundary: '',
+      emissionSources: '',
+      timestamp: ''
+    });
+    setEntries([]);
+    setEmissionFactors(initialEmissionFactors);
+    setCurrentStep('questionnaire');
+    setErrors([]);
+    console.log('🗑️ All GHG data cleared');
+  };
+
+  // Reset everything and go back to questionnaire
+  const resetToQuestionnaire = () => {
+    // Clear all data from localStorage
+    removeData('ghg_questionnaire');
+    removeData('ghg_entries');
+    removeData('ghg_emission_factors');
+    removeData('ghg_current_step');
+    
+    // Reset all state
+    clearAllGHGData();
+    
+    console.log('🔄 Reset to questionnaire - all data cleared from localStorage');
+  };
+
+  // Force refresh data (useful for debugging)
+  const refreshGHGData = () => {
+    setIsDataLoaded(false);
+    loadGHGData();
   };
 
   return {
@@ -244,13 +383,21 @@ export const useGHGCalculator = () => {
     errors,
     emissionFactors,
     totalEmissions,
+    isDataLoaded,
     
     // Functions
     submitQuestionnaire,
     calculateEmissions,
+    deleteEntry,
+    deleteAllEntries,
     addCustomFuel,
     deleteCustomFuel,
     getCurrentEmissionFactor,
-    goToResults
+    goToResults,
+    clearAllGHGData,
+    resetToQuestionnaire,
+    loadGHGData,
+    saveGHGData,
+    refreshGHGData
   };
 };
