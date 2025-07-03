@@ -62,7 +62,7 @@ const GHGCalculator: React.FC = () => {
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">GHG Emissions Calculator</h1>
           <p className="text-gray-600">
-            Comprehensive greenhouse gas emissions assessment for your organization
+             GreenHouse Gas emissions assessment for your organization
           </p>
           
           {/* Show restore info if we have saved data */}

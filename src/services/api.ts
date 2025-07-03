@@ -5,7 +5,7 @@ console.log('API_BASE_URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 100000, // 30 seconds timeout for file uploads
+  timeout: 100000, // timeout changed due to the free tier, REMEMBER TO CHANGE IT BACK 
 });
 
 export interface ExcelUploadResponse {
