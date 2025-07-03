@@ -1,0 +1,17 @@
+{
+    "name": "KPMG ESG Analytics Platform",
+    "short_name": "KPMG ESG",
+    "description": "Comprehensive ESG analytics and carbon footprint management platform",
+    "version": "1.0.1",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#2563eb",
+    "icons": [
+      {
+        "src": "/vite.svg",
+        "sizes": "192x192",
+        "type": "image/svg+xml"
+      }
+    ]
+  }

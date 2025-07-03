@@ -115,6 +115,9 @@ const createFugitiveGasFactors = () => {
   return gasFactors;
 };
 
+// 🔧 DATA VERSION for migration tracking
+export const EMISSION_FACTORS_VERSION = '1.1.0'; // Updated version
+
 // Emission factors database (converted from Python)
 export const initialEmissionFactors: EmissionFactorsDatabase = {
   'Scope 1': {
@@ -184,4 +187,26 @@ export const initialEmissionFactors: EmissionFactorsDatabase = {
       'District cooling': { factor: 0.4081, custom: false }
     }
   }
+};
+
+// 🔧 NEW: Check if data needs migration
+export const needsDataMigration = (savedVersion?: string): boolean => {
+  if (!savedVersion) return true; // No version = needs migration
+  
+  // Compare versions (simple string comparison for now)
+  return savedVersion !== EMISSION_FACTORS_VERSION;
+};
+
+// 🔧 NEW: Get data version from saved factors
+export const getDataVersion = (savedFactors: any): string | undefined => {
+  return savedFactors?._version || savedFactors?.version;
+};
+
+// 🔧 NEW: Add version to emission factors
+export const addVersionToEmissionFactors = (factors: EmissionFactorsDatabase): any => {
+  return {
+    ...factors,
+    _version: EMISSION_FACTORS_VERSION,
+    _lastUpdated: new Date().toISOString()
+  };
 };

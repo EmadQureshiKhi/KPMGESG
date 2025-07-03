@@ -41,6 +41,33 @@ export const useGHGCalculator = () => {
   // Validation errors
   const [errors, setErrors] = useState<string[]>([]);
 
+  // 🔧 NEW: Smart emission factors merger
+  const mergeEmissionFactors = (savedFactors: EmissionFactorsDatabase, defaultFactors: EmissionFactorsDatabase): EmissionFactorsDatabase => {
+    const merged = JSON.parse(JSON.stringify(defaultFactors)); // Start with latest defaults
+    
+    // Recursively merge custom fuels from saved data
+    const mergeCustomFuels = (savedObj: any, mergedObj: any, path: string[] = []) => {
+      if (!savedObj || !mergedObj) return;
+      
+      Object.keys(savedObj).forEach(key => {
+        if (typeof savedObj[key] === 'object' && savedObj[key] !== null) {
+          if (savedObj[key].custom === true) {
+            // This is a custom fuel - preserve it
+            mergedObj[key] = savedObj[key];
+            console.log(`✅ Preserved custom fuel: ${[...path, key].join(' > ')}`);
+          } else if (typeof mergedObj[key] === 'object') {
+            // Recurse deeper
+            mergeCustomFuels(savedObj[key], mergedObj[key], [...path, key]);
+          }
+        }
+      });
+    };
+    
+    mergeCustomFuels(savedFactors, merged);
+    console.log('🔄 Merged emission factors: preserved custom fuels + added new defaults');
+    return merged;
+  };
+
   // Load data from localStorage on component mount
   useEffect(() => {
     loadGHGData();
@@ -73,9 +100,14 @@ export const useGHGCalculator = () => {
         console.log(`✅ Loaded ${savedEntries.length} GHG entries:`, savedEntries);
       }
 
+      // 🔧 FIXED: Smart merge instead of overwrite
       if (savedEmissionFactors) {
-        setEmissionFactors(savedEmissionFactors);
-        console.log('✅ Loaded custom emission factors');
+        const mergedFactors = mergeEmissionFactors(savedEmissionFactors, initialEmissionFactors);
+        setEmissionFactors(mergedFactors);
+        console.log('✅ Loaded and merged emission factors (preserved custom + added new defaults)');
+      } else {
+        setEmissionFactors(initialEmissionFactors);
+        console.log('✅ Using default emission factors (no saved data)');
       }
 
       if (savedCurrentStep && (savedCurrentStep === 'calculator' || savedCurrentStep === 'results')) {
@@ -363,6 +395,22 @@ export const useGHGCalculator = () => {
     console.log('🔄 Reset to questionnaire - all data cleared from localStorage');
   };
 
+  // 🔧 NEW: Force refresh emission factors (for updates)
+  const refreshEmissionFactors = () => {
+    console.log('🔄 Refreshing emission factors...');
+    const savedFactors = loadData('ghg_emission_factors');
+    if (savedFactors) {
+      const mergedFactors = mergeEmissionFactors(savedFactors, initialEmissionFactors);
+      setEmissionFactors(mergedFactors);
+      saveData('ghg_emission_factors', mergedFactors);
+      console.log('✅ Emission factors refreshed and saved');
+    } else {
+      setEmissionFactors(initialEmissionFactors);
+      saveData('ghg_emission_factors', initialEmissionFactors);
+      console.log('✅ Reset to default emission factors');
+    }
+  };
+
   // Force refresh data (useful for debugging)
   const refreshGHGData = () => {
     setIsDataLoaded(false);
@@ -398,6 +446,7 @@ export const useGHGCalculator = () => {
     resetToQuestionnaire,
     loadGHGData,
     saveGHGData,
-    refreshGHGData
+    refreshGHGData,
+    refreshEmissionFactors // 🔧 NEW: For forcing emission factors update
   };
 };
