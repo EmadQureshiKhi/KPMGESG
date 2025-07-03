@@ -112,7 +112,7 @@ const GHGResultsSidebar: React.FC<GHGResultsSidebarProps> = ({
           <li>• Add custom fuel types for specific materials</li>
           <li>• Calculate all emission sources for comprehensive assessment</li>
           <li>• Review results before generating final report</li>
-          <li>• Hover over entries to reveal delete option</li>
+          <li>• Hover over entries to reveal delete options</li>
         </ul>
       </div>
     </div>
