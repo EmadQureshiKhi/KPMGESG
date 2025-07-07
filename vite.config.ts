@@ -11,10 +11,10 @@ export default defineConfig({
     rollupOptions: {
       input: 'index.html',
       output: {
-        // Add timestamp to filenames for cache busting
-        entryFileNames: 'assets/[name]-[hash]-[timestamp].js',
-        chunkFileNames: 'assets/[name]-[hash]-[timestamp].js',
-        assetFileNames: 'assets/[name]-[hash]-[timestamp].[ext]'
+        // Use valid Rollup placeholders for cache busting
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     },
     // Generate manifest for cache busting
