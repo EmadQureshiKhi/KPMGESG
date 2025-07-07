@@ -41,6 +41,15 @@ export const useGHGCalculator = () => {
   // Validation errors
   const [errors, setErrors] = useState<string[]>([]);
 
+  // UI feedback state
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [lastCalculation, setLastCalculation] = useState<{
+    emissionAmount: number;
+    fuelType: string;
+    scope: string;
+  } | null>(null);
+  const [highlightResults, setHighlightResults] = useState(false);
+
   // 🔧 NEW: Smart emission factors merger
   const mergeEmissionFactors = (savedFactors: EmissionFactorsDatabase, defaultFactors: EmissionFactorsDatabase): EmissionFactorsDatabase => {
     const merged = JSON.parse(JSON.stringify(defaultFactors)); // Start with latest defaults
@@ -260,6 +269,20 @@ export const useGHGCalculator = () => {
       return newEntries;
     });
     
+    // Show success feedback
+    setLastCalculation({
+      emissionAmount: emissions,
+      fuelType: currentCalculation.fuelType,
+      scope: currentCalculation.scope
+    });
+    setShowSuccessNotification(true);
+    setHighlightResults(true);
+    
+    // Remove highlight after animation
+    setTimeout(() => {
+      setHighlightResults(false);
+    }, 2000);
+    
     // Reset amount to 0 after calculation
     setCurrentCalculation(prev => ({ ...prev, amount: 0 }));
     setErrors([]);
@@ -432,6 +455,12 @@ export const useGHGCalculator = () => {
     emissionFactors,
     totalEmissions,
     isDataLoaded,
+    
+    // UI feedback state
+    showSuccessNotification,
+    setShowSuccessNotification,
+    lastCalculation,
+    highlightResults,
     
     // Functions
     submitQuestionnaire,

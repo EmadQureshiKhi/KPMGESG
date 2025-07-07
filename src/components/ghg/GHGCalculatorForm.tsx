@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calculator, Plus, X, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { CalculationState, EmissionFactorsDatabase } from '../../types/ghg';
 import { unitConversions, fugitiveGasFactors } from '../../data/emissionFactors';
 import SearchableDropdown from './SearchableDropdown';
@@ -359,13 +360,16 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
         </div>
 
         {/* Calculate Button */}
-        <button
+        <motion.button
           onClick={onCalculate}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
           className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center space-x-2"
         >
           <Calculator className="w-5 h-5" />
           <span>Calculate Emissions</span>
-        </button>
+        </motion.button>
       </div>
     </div>
   );

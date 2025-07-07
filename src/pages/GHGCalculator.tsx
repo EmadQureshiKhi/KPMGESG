@@ -5,6 +5,7 @@ import GHGQuestionnaire from '../components/ghg/GHGQuestionnaire';
 import GHGCalculatorForm from '../components/ghg/GHGCalculatorForm';
 import GHGResultsSidebar from '../components/ghg/GHGResultsSidebar';
 import GHGResults from '../components/ghg/GHGResults';
+import SuccessNotification from '../components/ghg/SuccessNotification';
 
 const GHGCalculator: React.FC = () => {
   const {
@@ -21,6 +22,10 @@ const GHGCalculator: React.FC = () => {
     emissionFactors,
     totalEmissions,
     isDataLoaded,
+    showSuccessNotification,
+    setShowSuccessNotification,
+    lastCalculation,
+    highlightResults,
     submitQuestionnaire,
     calculateEmissions,
     deleteEntry,
@@ -62,7 +67,7 @@ const GHGCalculator: React.FC = () => {
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">GHG Emissions Calculator</h1>
           <p className="text-gray-600">
-             GreenHouse Gas emissions assessment for your organization
+            Comprehensive greenhouse gas emissions assessment for your organization
           </p>
           
           {/* Show restore info if we have saved data */}
@@ -238,9 +243,21 @@ const GHGCalculator: React.FC = () => {
             totalEmissions={totalEmissions}
             onDeleteEntry={deleteEntry}
             onDeleteAll={deleteAllEntries}
+            highlightResults={highlightResults}
+            lastEntryId={entries.length > 0 ? entries[entries.length - 1].id : undefined}
           />
         </div>
       </div>
+
+      {/* Success Notification */}
+      <SuccessNotification
+        isVisible={showSuccessNotification}
+        onClose={() => setShowSuccessNotification(false)}
+        emissionAmount={lastCalculation?.emissionAmount || 0}
+        fuelType={lastCalculation?.fuelType || ''}
+        totalEmissions={totalEmissions}
+        scope={lastCalculation?.scope || ''}
+      />
 
       {/* Reset Option - Positioned at the bottom */}
       <div className="mt-8 pt-6 border-t border-gray-200">
