@@ -1,8 +1,9 @@
 import React from 'react';
 import { Calculator, Plus, X, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { CalculationState, EmissionFactorsDatabase } from '../../types/ghg';
+import { CalculationState, EmissionFactorsDatabase, CustomEquipmentData } from '../../types/ghg';
 import { unitConversions, fugitiveGasFactors } from '../../data/emissionFactors';
+import { getEquipmentOptionsWithCustom, getEquipmentDescriptionWithCustom, isCustomEquipment } from '../../data/equipmentTypes';
 import SearchableDropdown from './SearchableDropdown';
 
 interface GHGCalculatorFormProps {
@@ -11,10 +12,15 @@ interface GHGCalculatorFormProps {
   emissionFactors: EmissionFactorsDatabase;
   customFuel: { name: string; factor: number };
   setCustomFuel: React.Dispatch<React.SetStateAction<{ name: string; factor: number }>>;
+  customEquipment: { name: string; description: string; category: string };
+  setCustomEquipment: React.Dispatch<React.SetStateAction<{ name: string; description: string; category: string }>>;
+  customEquipmentTypes: any;
   errors: string[];
   onCalculate: () => void;
   onAddCustomFuel: () => void;
   onDeleteCustomFuel: (fuelType: string) => void;
+  onAddCustomEquipment: () => void;
+  onDeleteCustomEquipment: (category: string, equipmentType: string) => void;
   getCurrentEmissionFactor: () => number;
   questionnaireScope?: string;
 }
@@ -25,10 +31,15 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
   emissionFactors,
   customFuel,
   setCustomFuel,
+  customEquipment,
+  setCustomEquipment,
+  customEquipmentTypes,
   errors,
   onCalculate,
   onAddCustomFuel,
   onDeleteCustomFuel,
+  onAddCustomEquipment,
+  onDeleteCustomEquipment,
   getCurrentEmissionFactor,
   questionnaireScope
 }) => {
@@ -38,8 +49,13 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
       if (currentCalculation.scope === 'Scope 1') {
         const categories = Object.keys(emissionFactors[currentCalculation.scope] || {});
         
+        let equipmentOptions: string[] = [];
         let fuelCategories: string[] = [];
         let fuelTypes: string[] = [];
+        
+        if (currentCalculation.category) {
+          equipmentOptions = getEquipmentOptionsWithCustom(currentCalculation.category, customEquipmentTypes);
+        }
         
         if (currentCalculation.category && emissionFactors[currentCalculation.scope][currentCalculation.category]) {
           fuelCategories = Object.keys(emissionFactors[currentCalculation.scope][currentCalculation.category]);
@@ -49,7 +65,7 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
           }
         }
         
-        return { categories, fuelCategories, fuelTypes };
+        return { categories, equipmentOptions, fuelCategories, fuelTypes };
       } else {
         const fuelCategories = Object.keys(emissionFactors[currentCalculation.scope] || {});
         
@@ -58,15 +74,15 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
           fuelTypes = Object.keys(emissionFactors[currentCalculation.scope][currentCalculation.fuelCategory]);
         }
         
-        return { categories: [], fuelCategories, fuelTypes };
+        return { categories: [], equipmentOptions: [], fuelCategories, fuelTypes };
       }
     } catch (error) {
       console.error('Error getting available options:', error);
-      return { categories: [], fuelCategories: [], fuelTypes: [] };
+      return { categories: [], equipmentOptions: [], fuelCategories: [], fuelTypes: [] };
     }
   };
 
-  const { categories, fuelCategories, fuelTypes } = getAvailableOptions();
+  const { categories, equipmentOptions, fuelCategories, fuelTypes } = getAvailableOptions();
 
   // Handle number input changes to prevent sticky zeros
   const handleAmountChange = (value: string) => {
@@ -99,7 +115,13 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
   // Handle category change and reset dependent fields
   const handleCategoryChange = (category: string) => {
     setCurrentCalculation(prev => {
-      const newState = { ...prev, category };
+      const newState = { ...prev, category, equipmentType: '' };
+      
+      // Set default equipment type
+      const newEquipmentOptions = getEquipmentOptionsWithCustom(category, customEquipmentTypes);
+      if (newEquipmentOptions.length > 0) {
+        newState.equipmentType = newEquipmentOptions[0];
+      }
       
       // Reset fuel category and fuel type when category changes
       const newFuelCategories = Object.keys(emissionFactors[prev.scope][category] || {});
@@ -115,6 +137,11 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
       
       return newState;
     });
+  };
+
+  // Handle equipment type change
+  const handleEquipmentTypeChange = (equipmentType: string) => {
+    setCurrentCalculation(prev => ({ ...prev, equipmentType }));
   };
 
   // Handle fuel category change and reset fuel type
@@ -196,6 +223,30 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
           </div>
         )}
 
+        {/* Equipment Type Selection (Scope 1 only) */}
+        {currentCalculation.scope === 'Scope 1' && currentCalculation.category && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Equipment/Source Type
+              <span className="text-xs text-gray-500 ml-2">(for detailed tracking)</span>
+            </label>
+            <select
+              value={currentCalculation.equipmentType}
+              onChange={(e) => handleEquipmentTypeChange(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {equipmentOptions.map(equipment => (
+                <option key={equipment} value={equipment}>{equipment}</option>
+              ))}
+            </select>
+            {currentCalculation.equipmentType && (
+              <p className="text-xs text-gray-600 mt-1">
+                {getEquipmentDescriptionWithCustom(currentCalculation.category, currentCalculation.equipmentType, customEquipmentTypes)}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Fuel Category */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Fuel Category</label>
@@ -242,10 +293,58 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
 
         {/* Custom Fuel Management */}
         <div className="border-t pt-4">
-          <h4 className="font-medium text-gray-900 mb-3">Manage Fuel Types</h4>
+          <h4 className="font-medium text-gray-900 mb-3">Manage Custom Types</h4>
+          
+          {/* Add Custom Equipment Type (Scope 1 only) */}
+          {currentCalculation.scope === 'Scope 1' && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h5 className="text-sm font-medium text-blue-900 mb-3">Add Custom Equipment/Source Type</h5>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                  <select
+                    value={customEquipment.category}
+                    onChange={(e) => setCustomEquipment(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  >
+                    <option value="Stationary">Stationary</option>
+                    <option value="Mobile">Mobile</option>
+                    <option value="Fugitive">Fugitive</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Equipment Name</label>
+                  <input
+                    type="text"
+                    value={customEquipment.name}
+                    onChange={(e) => setCustomEquipment(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Custom Boiler"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                  <input
+                    type="text"
+                    value={customEquipment.description}
+                    onChange={(e) => setCustomEquipment(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Brief description"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={onAddCustomEquipment}
+                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Custom Equipment</span>
+              </button>
+            </div>
+          )}
           
           {/* Add Custom Fuel */}
-          <div className="space-y-3 mb-4">
+          <div className="space-y-3 mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
             <h5 className="text-sm font-medium text-gray-700">Add New Custom Fuel Type</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
@@ -280,8 +379,28 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
             </button>
           </div>
 
-          {/* Delete Custom Fuel */}
-          {fuelTypes.some(ft => {
+          {/* Delete Custom Types */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Delete Custom Equipment */}
+            {currentCalculation.scope === 'Scope 1' && 
+             isCustomEquipment(currentCalculation.category, currentCalculation.equipmentType, customEquipmentTypes) && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <h5 className="text-sm font-medium text-red-900 mb-2">Delete Custom Equipment</h5>
+                <p className="text-xs text-red-700 mb-2">
+                  Remove "{currentCalculation.equipmentType}" from {currentCalculation.category}
+                </p>
+                <button
+                  onClick={() => onDeleteCustomEquipment(currentCalculation.category, currentCalculation.equipmentType)}
+                  className="flex items-center space-x-2 bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 text-sm"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Delete Equipment</span>
+                </button>
+              </div>
+            )}
+
+            {/* Delete Custom Fuel */}
+            {fuelTypes.some(ft => {
             try {
               if (currentCalculation.scope === 'Scope 1') {
                 return emissionFactors[currentCalculation.scope][currentCalculation.category][currentCalculation.fuelCategory][ft]?.custom;
@@ -292,28 +411,32 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
               return false;
             }
           }) && (
-            <div>
-              <h5 className="text-sm font-medium text-gray-700 mb-2">Delete Custom Fuel Type</h5>
-              <button
-                onClick={() => onDeleteCustomFuel(currentCalculation.fuelType)}
-                disabled={!(() => {
-                  try {
-                    if (currentCalculation.scope === 'Scope 1') {
-                      return emissionFactors[currentCalculation.scope][currentCalculation.category][currentCalculation.fuelCategory][currentCalculation.fuelType]?.custom;
-                    } else {
-                      return emissionFactors[currentCalculation.scope][currentCalculation.fuelCategory][currentCalculation.fuelType]?.custom;
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <h5 className="text-sm font-medium text-red-900 mb-2">Delete Custom Fuel</h5>
+                <p className="text-xs text-red-700 mb-2">
+                  Remove "{currentCalculation.fuelType}" fuel type
+                </p>
+                <button
+                  onClick={() => onDeleteCustomFuel(currentCalculation.fuelType)}
+                  disabled={!(() => {
+                    try {
+                      if (currentCalculation.scope === 'Scope 1') {
+                        return emissionFactors[currentCalculation.scope][currentCalculation.category][currentCalculation.fuelCategory][currentCalculation.fuelType]?.custom;
+                      } else {
+                        return emissionFactors[currentCalculation.scope][currentCalculation.fuelCategory][currentCalculation.fuelType]?.custom;
+                      }
+                    } catch {
+                      return false;
                     }
-                  } catch {
-                    return false;
-                  }
-                })()}
-                className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <X className="w-4 h-4" />
-                <span>Delete Selected</span>
-              </button>
-            </div>
+                  })()}
+                  className="flex items-center space-x-2 bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Delete Fuel</span>
+                </button>
+              </div>
           )}
+          </div>
         </div>
 
         {/* Activity Data */}
@@ -321,12 +444,12 @@ const GHGCalculatorForm: React.FC<GHGCalculatorFormProps> = ({
           <h4 className="font-medium text-gray-900 mb-3">Activity Data</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
               <input
                 type="number"
                 value={currentCalculation.amount === 0 ? '' : currentCalculation.amount}
                 onChange={(e) => handleAmountChange(e.target.value)}
-                placeholder="Enter amount"
+                placeholder="Enter Quantity"
                 min="0"
                 step="0.01"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"

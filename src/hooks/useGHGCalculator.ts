@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { QuestionnaireData, EmissionEntry, CalculationState, EmissionFactorsDatabase } from '../types/ghg';
 import { initialEmissionFactors, unitConversions } from '../data/emissionFactors';
+import { getEquipmentOptionsWithCustom } from '../data/equipmentTypes';
 import { useDataPersistence } from '../contexts/DataPersistenceContext';
 
 export const useGHGCalculator = () => {
@@ -9,6 +10,7 @@ export const useGHGCalculator = () => {
   // State management
   const [currentStep, setCurrentStep] = useState<'questionnaire' | 'calculator' | 'results'>('questionnaire');
   const [emissionFactors, setEmissionFactors] = useState<EmissionFactorsDatabase>(initialEmissionFactors);
+  const [customEquipmentTypes, setCustomEquipmentTypes] = useState<any>({});
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   
   // Questionnaire state
@@ -26,6 +28,7 @@ export const useGHGCalculator = () => {
   const [currentCalculation, setCurrentCalculation] = useState<CalculationState>({
     scope: 'Scope 1',
     category: 'Stationary',
+    equipmentType: 'Boilers',
     fuelCategory: 'Gaseous Fuels',
     fuelType: 'Compressed Natural Gas',
     amount: 0,
@@ -36,6 +39,13 @@ export const useGHGCalculator = () => {
   const [customFuel, setCustomFuel] = useState({
     name: '',
     factor: 0
+  });
+
+  // Custom equipment management
+  const [customEquipment, setCustomEquipment] = useState({
+    name: '',
+    description: '',
+    category: 'Stationary'
   });
 
   // Validation errors
@@ -87,7 +97,7 @@ export const useGHGCalculator = () => {
     if (isDataLoaded) {
       saveGHGData();
     }
-  }, [questionnaire, entries, emissionFactors, currentStep, isDataLoaded]);
+  }, [questionnaire, entries, emissionFactors, customEquipmentTypes, currentStep, isDataLoaded]);
 
   // Load GHG data from localStorage
   const loadGHGData = () => {
@@ -97,6 +107,7 @@ export const useGHGCalculator = () => {
       const savedQuestionnaire = loadData('ghg_questionnaire');
       const savedEntries = loadData('ghg_entries');
       const savedEmissionFactors = loadData('ghg_emission_factors');
+      const savedCustomEquipment = loadData('ghg_custom_equipment');
       const savedCurrentStep = loadData('ghg_current_step');
 
       if (savedQuestionnaire && savedQuestionnaire.orgName) {
@@ -117,6 +128,11 @@ export const useGHGCalculator = () => {
       } else {
         setEmissionFactors(initialEmissionFactors);
         console.log('✅ Using default emission factors (no saved data)');
+      }
+
+      if (savedCustomEquipment) {
+        setCustomEquipmentTypes(savedCustomEquipment);
+        console.log('✅ Loaded custom equipment types:', savedCustomEquipment);
       }
 
       if (savedCurrentStep && (savedCurrentStep === 'calculator' || savedCurrentStep === 'results')) {
@@ -141,6 +157,7 @@ export const useGHGCalculator = () => {
       saveData('ghg_questionnaire', questionnaire);
       saveData('ghg_entries', entries);
       saveData('ghg_emission_factors', emissionFactors);
+      saveData('ghg_custom_equipment', customEquipmentTypes);
       saveData('ghg_current_step', currentStep);
       console.log('💾 GHG data saved to localStorage');
     } catch (error) {
@@ -170,9 +187,11 @@ export const useGHGCalculator = () => {
   useEffect(() => {
     if (isDataLoaded) {
       if (currentCalculation.scope === 'Scope 1') {
+        const equipmentOptions = getEquipmentOptionsWithCustom('Stationary', customEquipmentTypes);
         setCurrentCalculation(prev => ({
           ...prev,
           category: 'Stationary',
+          equipmentType: equipmentOptions[0] || 'Boilers',
           fuelCategory: 'Gaseous Fuels',
           fuelType: 'Compressed Natural Gas'
         }));
@@ -180,12 +199,13 @@ export const useGHGCalculator = () => {
         setCurrentCalculation(prev => ({
           ...prev,
           category: '',
+          equipmentType: '',
           fuelCategory: 'Electricity',
           fuelType: 'Grid Average'
         }));
       }
     }
-  }, [currentCalculation.scope, isDataLoaded]);
+  }, [currentCalculation.scope, isDataLoaded, customEquipmentTypes]);
 
   // Questionnaire validation
   const validateQuestionnaire = (): boolean => {
@@ -252,6 +272,7 @@ export const useGHGCalculator = () => {
       id: Date.now().toString(),
       scope: currentCalculation.scope,
       category: currentCalculation.category,
+      equipmentType: currentCalculation.equipmentType,
       fuelCategory: currentCalculation.fuelCategory,
       fuelType: currentCalculation.fuelType,
       amount: currentCalculation.amount,
@@ -374,6 +395,68 @@ export const useGHGCalculator = () => {
     }
   };
 
+  // Add custom equipment type
+  const addCustomEquipment = () => {
+    if (!customEquipment.name.trim() || !customEquipment.description.trim()) {
+      setErrors(['Please enter both equipment name and description']);
+      return;
+    }
+
+    const newCustomEquipmentTypes = JSON.parse(JSON.stringify(customEquipmentTypes));
+    
+    // Initialize category if it doesn't exist
+    if (!newCustomEquipmentTypes[customEquipment.category]) {
+      newCustomEquipmentTypes[customEquipment.category] = {};
+    }
+
+    // Check if equipment already exists
+    if (newCustomEquipmentTypes[customEquipment.category][customEquipment.name]) {
+      setErrors(['Equipment type already exists in this category']);
+      return;
+    }
+
+    // Add new custom equipment
+    newCustomEquipmentTypes[customEquipment.category][customEquipment.name] = {
+      description: customEquipment.description,
+      custom: true,
+      timestamp: new Date().toISOString()
+    };
+
+    setCustomEquipmentTypes(newCustomEquipmentTypes);
+    setCurrentCalculation(prev => ({ ...prev, equipmentType: customEquipment.name }));
+    
+    // Reset form
+    setCustomEquipment({ name: '', description: '', category: 'Stationary' });
+    setErrors([]);
+    console.log('✅ Custom equipment added:', customEquipment.name);
+  };
+
+  // Delete custom equipment type
+  const deleteCustomEquipment = (category: string, equipmentType: string) => {
+    const newCustomEquipmentTypes = JSON.parse(JSON.stringify(customEquipmentTypes));
+    
+    if (newCustomEquipmentTypes[category] && newCustomEquipmentTypes[category][equipmentType]) {
+      delete newCustomEquipmentTypes[category][equipmentType];
+      
+      // Clean up empty categories
+      if (Object.keys(newCustomEquipmentTypes[category]).length === 0) {
+        delete newCustomEquipmentTypes[category];
+      }
+      
+      setCustomEquipmentTypes(newCustomEquipmentTypes);
+      
+      // Select first available equipment type if current one was deleted
+      if (currentCalculation.equipmentType === equipmentType) {
+        const remainingEquipment = getEquipmentOptionsWithCustom(category, newCustomEquipmentTypes);
+        if (remainingEquipment.length > 0) {
+          setCurrentCalculation(prev => ({ ...prev, equipmentType: remainingEquipment[0] }));
+        }
+      }
+      
+      console.log('✅ Custom equipment deleted:', equipmentType);
+    }
+  };
+
   // Calculate totals
   const totalEmissions = entries.reduce((sum, entry) => sum + entry.emissions, 0);
 
@@ -399,6 +482,7 @@ export const useGHGCalculator = () => {
     });
     setEntries([]);
     setEmissionFactors(initialEmissionFactors);
+    setCustomEquipmentTypes({});
     setCurrentStep('questionnaire');
     setErrors([]);
     console.log('🗑️ All GHG data cleared');
@@ -410,6 +494,7 @@ export const useGHGCalculator = () => {
     removeData('ghg_questionnaire');
     removeData('ghg_entries');
     removeData('ghg_emission_factors');
+    removeData('ghg_custom_equipment');
     removeData('ghg_current_step');
     
     // Reset all state
@@ -451,6 +536,9 @@ export const useGHGCalculator = () => {
     setCurrentCalculation,
     customFuel,
     setCustomFuel,
+    customEquipment,
+    setCustomEquipment,
+    customEquipmentTypes,
     errors,
     emissionFactors,
     totalEmissions,
@@ -469,6 +557,8 @@ export const useGHGCalculator = () => {
     deleteAllEntries,
     addCustomFuel,
     deleteCustomFuel,
+    addCustomEquipment,
+    deleteCustomEquipment,
     getCurrentEmissionFactor,
     goToResults,
     clearAllGHGData,

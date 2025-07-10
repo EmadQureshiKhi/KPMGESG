@@ -15,7 +15,7 @@ const formatDate = (dateString: string): string => {
 };
 
 // Helper function to get custom fuels
-const getCustomFuels = (emissionFactors: EmissionFactorsDatabase): any[] => {
+const getCustomFuels = (emissionFactors: EmissionFactorsDatabase, customEquipmentTypes: any = {}): any[] => {
   const customFuels: any[] = [];
   
   // Iterate through all scopes
@@ -60,6 +60,25 @@ const getCustomFuels = (emissionFactors: EmissionFactorsDatabase): any[] => {
   return customFuels;
 };
 
+// Helper function to get custom equipment types
+const getCustomEquipmentTypes = (customEquipmentTypes: any = {}): any[] => {
+  const customEquipment: any[] = [];
+  
+  Object.entries(customEquipmentTypes).forEach(([category, equipmentData]: [string, any]) => {
+    Object.entries(equipmentData).forEach(([equipmentName, equipmentInfo]: [string, any]) => {
+      if (equipmentInfo.custom) {
+        customEquipment.push({
+          'Category': category,
+          'Equipment/Source Type': equipmentName,
+          'Description': equipmentInfo.description || '',
+          'Date Added': equipmentInfo.timestamp ? formatDate(equipmentInfo.timestamp) : 'N/A'
+        });
+      }
+    });
+  });
+  
+  return customEquipment;
+};
 // Create questionnaire sheet data
 const createQuestionnaireData = (questionnaire: QuestionnaireData): any[] => {
   return [{
@@ -82,6 +101,7 @@ const createCalculationsData = (entries: EmissionEntry[]): any[] => {
   return entries.map(entry => ({
     'Scope': entry.scope,
     'Category': entry.category || '',
+    'Equipment/Source Type': entry.equipmentType || '',
     'Fuel Category': entry.fuelCategory,
     'Fuel Type': entry.fuelType,
     'Amount': entry.amount,
@@ -131,11 +151,12 @@ const createActivityBreakdownData = (data: ExportData): any[] => {
   
   // Group by fuel type
   const fuelTypeGroups = entries.reduce((acc, entry) => {
-    const key = `${entry.scope} - ${entry.fuelType}`;
+    const key = `${entry.scope} - ${entry.category} - ${entry.equipmentType} - ${entry.fuelType}`;
     if (!acc[key]) {
       acc[key] = {
         scope: entry.scope,
         category: entry.category,
+        equipmentType: entry.equipmentType,
         fuelCategory: entry.fuelCategory,
         fuelType: entry.fuelType,
         totalEmissions: 0,
@@ -153,6 +174,7 @@ const createActivityBreakdownData = (data: ExportData): any[] => {
   return Object.values(fuelTypeGroups).map((group: any) => ({
     'Scope': group.scope,
     'Category': group.category || '',
+    'Equipment/Source Type': group.equipmentType || '',
     'Fuel Category': group.fuelCategory,
     'Fuel Type': group.fuelType,
     'Total Amount': group.totalAmount,
@@ -166,7 +188,7 @@ const createActivityBreakdownData = (data: ExportData): any[] => {
 };
 
 // Export to Excel
-export const exportToExcel = async (data: ExportData, format: 'excel' | 'csv' = 'excel'): Promise<void> => {
+export const exportToExcel = async (data: ExportData, format: 'excel' | 'csv' = 'excel', customEquipmentTypes: any = {}): Promise<void> => {
   const { questionnaire, entries, emissionFactors } = data;
   
   // Create workbook
@@ -193,10 +215,17 @@ export const exportToExcel = async (data: ExportData, format: 'excel' | 'csv' = 
   XLSX.utils.book_append_sheet(wb, activityBreakdownWS, 'Activity Breakdown');
   
   // Sheet 5: Custom Fuels (only if custom fuels exist)
-  const customFuels = getCustomFuels(emissionFactors);
+  const customFuels = getCustomFuels(emissionFactors, customEquipmentTypes);
   if (customFuels.length > 0) {
     const customFuelsWS = XLSX.utils.json_to_sheet(customFuels);
     XLSX.utils.book_append_sheet(wb, customFuelsWS, 'Custom Fuels');
+  }
+  
+  // Sheet 6: Custom Equipment Types (only if custom equipment exists)
+  const customEquipment = getCustomEquipmentTypes(customEquipmentTypes);
+  if (customEquipment.length > 0) {
+    const customEquipmentWS = XLSX.utils.json_to_sheet(customEquipment);
+    XLSX.utils.book_append_sheet(wb, customEquipmentWS, 'Custom Equipment');
   }
   
   // Generate filename
@@ -221,6 +250,10 @@ export const exportToExcel = async (data: ExportData, format: 'excel' | 'csv' = 
     
     if (customFuels.length > 0) {
       sheets.push({ name: 'Custom_Fuels', data: customFuels });
+    }
+    
+    if (customEquipment.length > 0) {
+      sheets.push({ name: 'Custom_Equipment', data: customEquipment });
     }
     
     sheets.forEach(sheet => {

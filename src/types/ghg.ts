@@ -31,12 +31,18 @@ export interface CustomFuel {
 export interface CalculationState {
   scope: string;
   category: string;
+  equipmentType: string;
   fuelCategory: string;
   fuelType: string;
   amount: number;
   unit: string;
 }
 
+export interface CustomEquipmentData {
+  name: string;
+  description: string;
+  category: string;
+}
 export interface EmissionFactor {
   factor: number;
   custom: boolean;

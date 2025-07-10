@@ -18,6 +18,9 @@ const GHGCalculator: React.FC = () => {
     setCurrentCalculation,
     customFuel,
     setCustomFuel,
+    customEquipment,
+    setCustomEquipment,
+    customEquipmentTypes,
     errors,
     emissionFactors,
     totalEmissions,
@@ -32,6 +35,8 @@ const GHGCalculator: React.FC = () => {
     deleteAllEntries,
     addCustomFuel,
     deleteCustomFuel,
+    addCustomEquipment,
+    deleteCustomEquipment,
     getCurrentEmissionFactor,
     goToResults,
     resetToQuestionnaire,
@@ -227,10 +232,15 @@ const GHGCalculator: React.FC = () => {
             emissionFactors={emissionFactors}
             customFuel={customFuel}
             setCustomFuel={setCustomFuel}
+            customEquipment={customEquipment || { name: '', description: '', category: 'Stationary' }}
+            setCustomEquipment={setCustomEquipment || (() => {})}
+            customEquipmentTypes={customEquipmentTypes || {}}
             errors={errors}
             onCalculate={calculateEmissions}
             onAddCustomFuel={addCustomFuel}
             onDeleteCustomFuel={deleteCustomFuel}
+            onAddCustomEquipment={addCustomEquipment || (() => {})}
+            onDeleteCustomEquipment={deleteCustomEquipment || (() => {})}
             getCurrentEmissionFactor={getCurrentEmissionFactor}
             questionnaireScope={questionnaire.emissionSources}
           />

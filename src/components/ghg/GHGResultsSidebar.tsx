@@ -62,7 +62,10 @@ const GHGResultsSidebar: React.FC<GHGResultsSidebarProps> = ({
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 truncate">{entry.fuelType}</p>
-                    <p className="text-sm text-gray-600">{entry.scope} • {entry.fuelCategory}</p>
+                    <p className="text-sm text-gray-600">
+                      {entry.scope} • {entry.category}
+                      {entry.equipmentType && ` • ${entry.equipmentType}`}
+                    </p>
                     <p className="text-sm text-gray-900">
                       {entry.amount} {entry.unit_type} = <span className="font-medium">
                         {entry.id === lastEntryId ? (

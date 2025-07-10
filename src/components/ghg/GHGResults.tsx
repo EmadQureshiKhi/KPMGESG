@@ -8,6 +8,7 @@ interface GHGResultsProps {
   entries: EmissionEntry[];
   totalEmissions: number;
   emissionFactors: any;
+  customEquipmentTypes?: any;
   onBackToCalculator: () => void;
   onDeleteEntry?: (entryId: string) => void;
 }
@@ -17,6 +18,7 @@ const GHGResults: React.FC<GHGResultsProps> = ({
   entries,
   totalEmissions,
   emissionFactors,
+  customEquipmentTypes = {},
   onBackToCalculator,
   onDeleteEntry
 }) => {
@@ -40,7 +42,7 @@ const GHGResults: React.FC<GHGResultsProps> = ({
         totalEmissions
       };
       
-      await exportToExcel(exportData, exportFormat);
+      await exportToExcel(exportData, exportFormat, customEquipmentTypes);
     } catch (error) {
       console.error('Export failed:', error);
       alert('Export failed. Please try again.');
@@ -178,6 +180,13 @@ const GHGResults: React.FC<GHGResultsProps> = ({
               <p className="text-green-100 text-sm">{entries.length} activities</p>
             </div>
           </div>
+          {Object.values(customEquipmentTypes).some((category: any) => 
+            Object.values(category).some((equipment: any) => equipment.custom)
+          ) && (
+            <div>
+              <strong>Custom Equipment Sheet:</strong> User-defined equipment types
+            </div>
+          )}
         </div>
       </div>
 
@@ -199,7 +208,7 @@ const GHGResults: React.FC<GHGResultsProps> = ({
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Scope</th>
-                  <th className="text-left p-4 text-sm font-medium text-gray-600">Category</th>
+                  <th className="text-left p-4 text-sm font-medium text-gray-600">Category & Equipment</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Fuel Type</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Amount</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Emission Factor</th>
@@ -215,7 +224,13 @@ const GHGResults: React.FC<GHGResultsProps> = ({
                   <tr key={entry.id} className="hover:bg-gray-50 group">
                     <td className="p-4 font-medium text-gray-900">{entry.scope}</td>
                     <td className="p-4 text-gray-600">
-                      {entry.category && `${entry.category} • `}{entry.fuelCategory}
+                      <div>
+                        <div className="font-medium">{entry.category}</div>
+                        {entry.equipmentType && (
+                          <div className="text-xs text-gray-500">{entry.equipmentType}</div>
+                        )}
+                        <div className="text-xs text-blue-600">{entry.fuelCategory}</div>
+                      </div>
                     </td>
                     <td className="p-4 text-gray-900">{entry.fuelType}</td>
                     <td className="p-4 text-gray-600">{entry.amount} {entry.unit_type}</td>
